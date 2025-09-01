@@ -1,13 +1,37 @@
 services:
+
+  #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
+  #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: bridge-devnet-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+#    healthcheck:
+#      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 30s
+
   neox-node:
+    container_name: bridge-devnet-neox
     build:
       context: ./go-ethereum
-      dockerfile: neox.Dockerfile
+      dockerfile: ../neox.Dockerfile
     ports:
       - 8563:8563
     command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node2/geth_node.log" ]
 
   neon3-node:
+    container_name: bridge-devnet-neon3
     image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.7.5
     ports:
       - 40332:40332
@@ -23,3 +47,6 @@ services:
       "sh", "-c",
       "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP\" \"10000000\" && sleep 3 && tail --retry -f ./Logs/ConsensusService/*"
     ]
+
+volumes:
+  rabbitmq_data:

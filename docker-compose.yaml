@@ -5,4 +5,21 @@ services:
       dockerfile: neox.Dockerfile
     ports:
       - 8563:8563
-    command: ["sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node2/geth_node.log"]
+    command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node2/geth_node.log" ]
+
+  neon3-node:
+    image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.7.5
+    ports:
+      - 40332:40332
+    volumes:
+      - ./neon3-config/config-consensus.privatenet3.json:/neo-cli/config.json:ro
+      - ./neon3-config/wallet-consensus.privatenet3.json:/neo-cli/wallet.json:ro
+      - ./neon3-config/rpcserver.config-consensus.json:/neo-cli/Plugins/RpcServer/RpcServer.json:ro
+      - ./neon3-config/dbft.config-consensus.json:/neo-cli/Plugins/DBFTPlugin/DBFTPlugin.json:ro
+      - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
+      - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
+      - ./tools/run-neo-node.expect:/root/tools/run-neo-node.expect
+    entrypoint: [
+      "sh", "-c",
+      "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP\" \"10000000\" && sleep 3 && tail --retry -f ./Logs/ConsensusService/*"
+    ]

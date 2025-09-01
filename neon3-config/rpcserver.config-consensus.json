@@ -1,0 +1,30 @@
+{
+  "PluginConfiguration": {
+    "Servers": [
+      {
+        "Network": 5195086,
+        "BindAddress": "0.0.0.0",
+        "Port": 40332,
+        "SslCert": "",
+        "SslCertPassword": "",
+        "TrustedAuthorities": [],
+        "RpcUser": "",
+        "RpcPass": "",
+        "EnableCors": false,
+        "AllowOrigins": [],
+        "KeepAliveTimeout": 60,
+        "RequestHeadersTimeout": 15,
+        "MaxGasInvoke": 100000,
+        "MaxFee": 0.1,
+        "MaxConcurrentConnections": 40,
+        "MaxIteratorResultItems": 100,
+        "MaxRequestBodySize": 5242880,
+        "MaxStackSize": 65535,
+        "DisabledMethods": [ ],
+        "SessionEnabled": true,
+        "SessionExpirationTime": 60,
+        "FindStoragePageSize": 50
+      }
+    ]
+  }
+}

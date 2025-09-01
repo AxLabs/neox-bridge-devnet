@@ -1,0 +1,15 @@
+#!/usr/bin/expect
+
+set passNeo [lindex $argv 0]
+set address [lindex $argv 1]
+set amount [lindex $argv 2]
+spawn dotnet neo-cli.dll
+sleep 5
+send "\r"
+expect "neo>"
+send "send GAS $address $amount\r"
+expect "password:"
+send "$passNeo\r"
+expect "Relay tx? (no|yes):"
+send "yes\r"
+interact

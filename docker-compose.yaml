@@ -1,26 +1,5 @@
 services:
 
-  #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
-  #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: bridge-devnet-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
-      RABBITMQ_DEFAULT_VHOST: /
-    ports:
-      - 5672:5672
-      - 15672:15672
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-#    healthcheck:
-#      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 5
-#      start_period: 30s
-
   neox-node:
     container_name: bridge-devnet-neox
     build:
@@ -47,6 +26,27 @@ services:
       "sh", "-c",
       "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP\" \"10000000\" && sleep 3 && tail --retry -f ./Logs/ConsensusService/*"
     ]
+
+  #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
+  #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: bridge-devnet-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+#    healthcheck:
+#      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 30s
 
 volumes:
   rabbitmq_data:

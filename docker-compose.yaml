@@ -1,0 +1,8 @@
+services:
+  neox-node:
+    build:
+      context: ./go-ethereum
+      dockerfile: neox.Dockerfile
+    ports:
+      - 8563:8563
+    command: ["sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node2/geth_node.log"]

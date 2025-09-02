@@ -59,10 +59,10 @@ To verify that the nodes are up and responding via RPC:
 
 - Neo X:
    ```bash
-   curl -X POST -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8562
+   curl -X POST --json '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8562
    ```
 
 - Neo N3:
    ```bash
-   curl -s -X POST -d '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
+   curl -s -X POST --json '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
    ```

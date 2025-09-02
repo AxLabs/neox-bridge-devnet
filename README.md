@@ -39,7 +39,7 @@ This project provides a complete development stack with:
    ```
 
 3. **Access the services:**
-   - NeoX RPC: http://localhost:8563
+   - NeoX RPC: http://localhost:8562
    - NeoN3 RPC: http://localhost:40332
    - RabbitMQ Management UI: http://localhost:15672 (admin/admin123)
 
@@ -52,3 +52,17 @@ This project provides a complete development stack with:
     ```bash
     docker compose down -v
     ```
+
+## Check node availability
+
+To verify that the nodes are up and responding via RPC:
+
+- Neo X:
+   ```bash
+   curl -X POST -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8562
+   ```
+
+- Neo N3:
+   ```bash
+   curl -s -X POST -d '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
+   ```

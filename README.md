@@ -13,11 +13,24 @@ This project provides a complete development stack with:
 
 - Docker & Docker Compose
 
+## Clone the repository (with submodules)
+
+1. **First-time clone:**
+   ```bash
+   git clone --recurse-submodules https://github.com/AxLabs/neox-bridge-devnet.git
+   cd neox-bridge-devnet
+   ```
+
+2. **If you already cloned without submodules:**
+   ```bash
+   git submodule update --init --recursive
+   ```
+
 ## Quick Start
 
-1. **Clone and navigate to the project:**
+1. **Navigate to the project directory:**
    ```bash
-   cd bridge-devnet
+   cd neox-bridge-devnet
    ```
 
 2. **Start all services:**

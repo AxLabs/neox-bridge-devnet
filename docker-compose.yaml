@@ -7,7 +7,26 @@ services:
       dockerfile: ../neox.Dockerfile
     ports:
       - 8562:8562
-    command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node2/geth_node.log" ]
+    command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node1/geth_node.log" ]
+
+  neox-funding:
+    container_name: bridge-devnet-neox-funding
+    image: node:18-alpine
+    depends_on:
+      - neox-node
+      - neon3-node
+    volumes:
+      - ./tools:/app/tools
+      - ./tools/funding/neox-funding.csv:/app/neox-funding.csv
+      - ./go-ethereum:/app/go-ethereum
+    working_dir: /app/tools/funding
+    environment:
+      - NEOX_RPC_URL=http://neox-node:8562
+    command: [
+      "sh", "-c",
+      "npm install && node fund-neox-accounts.js"
+    ]
+    restart: "no"
 
   neon3-node:
     container_name: bridge-devnet-neon3

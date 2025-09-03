@@ -53,16 +53,36 @@ This project provides a complete development stack with:
     docker compose down -v
     ```
 
+## Funding Accounts
+### NeoX:
+   To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts.
+
+   Optionally, you can invoke again the funding script manually if needed:
+   ```bash
+    docker compose run --rm neox-funding
+   ```
+   Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv`.
+
+### NeoN3
+   To fund an account on NeoN3 it has to be added to the command line of the neo-n3 service in the `docker-compose.yml` as follows:
+   ```yaml
+   entrypoint: [
+   "sh", "-c",
+   "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"<N3_ADDRESS>\" \"<GAS_AMOUNT>\" (etcetera...)"
+   ]
+   ```
+  Where `<N3_ADDRESS>` is the address to fund and `<GAS_AMOUNT>` is the amount of GAS token to be sent to the indicated address. Any other addresses you want to fund will have to be funded manually after the node is started.
+
 ## Check node availability
 
 To verify that the nodes are up and responding via RPC:
 
-- Neo X:
+### Neo X:
    ```bash
    curl -X POST --json '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8562
    ```
 
-- Neo N3:
+### Neo N3:
    ```bash
    curl -s -X POST --json '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
    ```

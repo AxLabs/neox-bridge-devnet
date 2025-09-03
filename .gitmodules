@@ -1,3 +1,6 @@
 [submodule "go-ethereum"]
 	path = go-ethereum
 	url = git@github.com:bane-labs/go-ethereum.git
+[submodule "bridge-evm-contracts"]
+	path = bridge-evm-contracts
+	url = git@github.com:bane-labs/bridge-evm-contracts.git

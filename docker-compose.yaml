@@ -30,7 +30,7 @@ services:
 
   neon3-node:
     container_name: bridge-devnet-neon3
-    image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.7.5
+    image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.8.2
     ports:
       - 40332:40332
     volumes:
@@ -41,16 +41,39 @@ services:
       - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
       - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
       - ./tools/run-neo-node.expect:/root/tools/run-neo-node.expect
+    entrypoint: [
+      "sh", "-c",
+      # "expect -n /root/tools/run-neo-node.expect neo \"$$GAS_AMOUNT\" \"$$DEPLOYER_ADDRESS\" \"$$GOVERNOR_ADDRESS\" \"$$RELAYER_ADDRESS\" \"$$VALIDATOR1_ADDRESS\" && tail -f ./Logs/ConsensusService/*"
+      "screen -dmS neo-node dotnet neo-cli.dll && sleep 5 && tail -f ./Logs/ConsensusService/*"
+    ]
+
+  neon3-funding:
+    container_name: bridge-devnet-neon3-funding
+    image: ubuntu:24.04
+    depends_on:
+      - neon3-node
+    volumes:
+      - ./tools/neon3-funding.sh:/root/neon3-funding.sh
     environment:
+      - NEON3_RPC_URL=http://neon3-node:40332
       - GAS_AMOUNT=10000000
       - DEPLOYER_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
       - GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
       - RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
       - VALIDATOR1_ADDRESS=NfyC3AwWwwvuBadG3D387r6Qb59ALzXCrN
-    entrypoint: [
-      "sh", "-c",
-      "expect -n /root/tools/run-neo-node.expect neo \"$$GAS_AMOUNT\" \"$$DEPLOYER_ADDRESS\" \"$$GOVERNOR_ADDRESS\" \"$$RELAYER_ADDRESS\" \"$$VALIDATOR1_ADDRESS\" && tail -f ./Logs/ConsensusService/*"
-    ]
+    working_dir: /root
+    command: [
+      "sh", "-c", 
+      "apt-get update && apt-get install -y curl jq \
+        && echo \"Funding accounts...\" \
+        && chmod u+x neon3-funding.sh \
+        && ./neon3-funding.sh $$DEPLOYER_ADDRESS $$GAS_AMOUNT \
+        && ./neon3-funding.sh $$GOVERNOR_ADDRESS $$GAS_AMOUNT \
+        && ./neon3-funding.sh $$RELAYER_ADDRESS $$GAS_AMOUNT \
+        && ./neon3-funding.sh $$VALIDATOR1_ADDRESS $$GAS_AMOUNT
+        echo \"Funding complete.\"
+      "
+      ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
   #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672

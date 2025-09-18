@@ -41,9 +41,15 @@ services:
       - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
       - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
       - ./tools/run-neo-node.expect:/root/tools/run-neo-node.expect
+    environment:
+      - GAS_AMOUNT=10000000
+      - DEPLOYER_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
+      - GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
+      - VALIDATOR1_ADDRESS=NfyC3AwWwwvuBadG3D387r6Qb59ALzXCrN
     entrypoint: [
       "sh", "-c",
-      "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP\" \"10000000\" && sleep 3 && tail --retry -f ./Logs/ConsensusService/*"
+      "expect -n /root/tools/run-neo-node.expect neo \"$$GAS_AMOUNT\" \"$$DEPLOYER_ADDRESS\" \"$$GOVERNOR_ADDRESS\" \"$$RELAYER_ADDRESS\" \"$$VALIDATOR1_ADDRESS\" && tail -f ./Logs/ConsensusService/*"
     ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)

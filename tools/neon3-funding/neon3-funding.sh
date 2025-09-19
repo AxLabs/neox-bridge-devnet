@@ -86,7 +86,7 @@ send_gas() {
         echo "GAS balance is greater than or equal to 10000000 ($gas_balance), skipping GAS transfer for $address"
         return
     fi
-    echo "GAS balance is 0, sending $amount GAS to $address"
+    echo "GAS balance is less than 10000000 ($gas_balance), sending $amount GAS to $address"
     local response
     response=$(curl -s -X POST "$NEON3_RPC_URL" \
         -H "Content-Type: application/json" \
@@ -173,6 +173,7 @@ set -e  # Exit on any error
 
 # Call sanity check functions
 check_rpc_url
+check_gas_token_hash
 check_required_params "$@"
 
 ADDRESS_TO_FUND="$1"

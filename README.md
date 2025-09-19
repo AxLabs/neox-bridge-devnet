@@ -59,7 +59,7 @@ To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to ad
 
 Optionally, you can invoke again the funding script manually if needed:
    ```bash
-    docker docker compose up -d neox-funding
+    docker compose up -d neox-funding
    ```
 Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts.
 
@@ -68,7 +68,7 @@ To fund accounts on NeoN3, you can use the `FUNDED_ADDRESS` and `GAS_AMOUNT` env
 
 Optionally, you can invoke again the funding script manually if needed:
    ```bash
-   docker docker compose up -d neon3-funding
+   docker compose up -d neon3-funding
    ```
 Note that running the funding service multiple times will fund all the wallets in the `neon3-wallets` dir only if they have less balance than the `GAS_AMOUNT` env variable.
 

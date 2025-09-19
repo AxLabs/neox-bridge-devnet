@@ -55,23 +55,22 @@ This project provides a complete development stack with:
 
 ## Funding Accounts
 ### NeoX:
-   To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts.
+To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts, by the `neox-funding` service.
 
-   Optionally, you can invoke again the funding script manually if needed:
+Optionally, you can invoke again the funding script manually if needed:
    ```bash
-    docker compose run --rm neox-funding
+    docker docker compose up -d neox-funding
    ```
-   Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv`.
+Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts.
 
-### NeoN3
-   To fund an account on NeoN3 it has to be added to the command line of the neo-n3 service in the `docker-compose.yml` as follows:
-   ```yaml
-   entrypoint: [
-   "sh", "-c",
-   "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"<N3_ADDRESS>\" \"<GAS_AMOUNT>\" (etcetera...)"
-   ]
+### NeoN3:
+To fund accounts on NeoN3, you can use the `FUNDED_ADDRESS` and `GAS_AMOUNT` env variables of the `neon3-funding` service. The funding will be processed automatically after the NeoN3 node starts, and it will also fund all the wallets in the `/tools/neon3-funding/neon3-wallets` dir.
+
+Optionally, you can invoke again the funding script manually if needed:
+   ```bash
+   docker docker compose up -d neon3-funding
    ```
-  Where `<N3_ADDRESS>` is the address to fund and `<GAS_AMOUNT>` is the amount of GAS token to be sent to the indicated address. Any other addresses you want to fund will have to be funded manually after the node is started.
+Note that running the funding service multiple times will fund all the wallets in the `neon3-wallets` dir only if they have less balance than the `GAS_AMOUNT` env variable.
 
 ## Check node availability
 

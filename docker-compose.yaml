@@ -17,9 +17,8 @@ services:
       - neon3-node
     volumes:
       - ./tools:/app/tools
-      - ./tools/funding/neox-funding.csv:/app/neox-funding.csv
       - ./go-ethereum:/app/go-ethereum
-    working_dir: /app/tools/funding
+    working_dir: /app/tools/neox-funding
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
     command: [
@@ -40,37 +39,33 @@ services:
       - ./neon3-config/dbft.config-consensus.json:/neo-cli/Plugins/DBFTPlugin/DBFTPlugin.json:ro
       - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
       - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
-      - ./tools/run-neo-node.expect:/root/tools/run-neo-node.expect
     entrypoint: [
       "sh", "-c",
-      # "expect -n /root/tools/run-neo-node.expect neo \"$$GAS_AMOUNT\" \"$$DEPLOYER_ADDRESS\" \"$$GOVERNOR_ADDRESS\" \"$$RELAYER_ADDRESS\" \"$$VALIDATOR1_ADDRESS\" && tail -f ./Logs/ConsensusService/*"
       "screen -dmS neo-node dotnet neo-cli.dll && sleep 5 && tail -f ./Logs/ConsensusService/*"
     ]
 
   neon3-funding:
     container_name: bridge-devnet-neon3-funding
-    image: ubuntu:24.04
+    build:
+      dockerfile_inline: |
+        FROM ubuntu:24.04
+        RUN apt-get update && apt-get install -y curl jq
     depends_on:
       - neon3-node
     volumes:
-      - ./tools/neon3-funding.sh:/root/neon3-funding.sh
+      - ./tools/neon3-funding/:/root/neon3-funding
+      - ./tools/neon3-wallets:/root/neon3-wallets
     environment:
       - NEON3_RPC_URL=http://neon3-node:40332
       - GAS_AMOUNT=10000000
-      - DEPLOYER_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
-      - GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
-      - RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
-      - VALIDATOR1_ADDRESS=NfyC3AwWwwvuBadG3D387r6Qb59ALzXCrN
-    working_dir: /root
+      - GAS_TOKEN_HASH=0xd2a4cff31913016155e38e474a2c06d08be276cf
+      - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
+    working_dir: /root/neon3-funding
     command: [
       "sh", "-c", 
-      "apt-get update && apt-get install -y curl jq \
-        && echo \"Funding accounts...\" \
+      "echo \"Funding accounts...\" \
         && chmod u+x neon3-funding.sh \
-        && ./neon3-funding.sh $$DEPLOYER_ADDRESS $$GAS_AMOUNT \
-        && ./neon3-funding.sh $$GOVERNOR_ADDRESS $$GAS_AMOUNT \
-        && ./neon3-funding.sh $$RELAYER_ADDRESS $$GAS_AMOUNT \
-        && ./neon3-funding.sh $$VALIDATOR1_ADDRESS $$GAS_AMOUNT
+        && ./neon3-funding.sh $$FUNDED_ADDRESS $$GAS_AMOUNT \
         echo \"Funding complete.\"
       "
       ]

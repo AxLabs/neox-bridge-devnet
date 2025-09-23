@@ -17,9 +17,8 @@ services:
       - neon3-node
     volumes:
       - ./tools:/app/tools
-      - ./tools/funding/neox-funding.csv:/app/neox-funding.csv
       - ./go-ethereum:/app/go-ethereum
-    working_dir: /app/tools/funding
+    working_dir: /app/tools/neox-funding
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
     command: [
@@ -30,7 +29,7 @@ services:
 
   neon3-node:
     container_name: bridge-devnet-neon3
-    image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.7.5
+    image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.8.2
     ports:
       - 40332:40332
     volumes:
@@ -40,11 +39,36 @@ services:
       - ./neon3-config/dbft.config-consensus.json:/neo-cli/Plugins/DBFTPlugin/DBFTPlugin.json:ro
       - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
       - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
-      - ./tools/run-neo-node.expect:/root/tools/run-neo-node.expect
     entrypoint: [
       "sh", "-c",
-      "screen -dmS node expect -n /root/tools/run-neo-node.expect neo \"NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP\" \"10000000\" && sleep 3 && tail --retry -f ./Logs/ConsensusService/*"
+      "screen -dmS neo-node dotnet neo-cli.dll && sleep 5 && tail -f ./Logs/ConsensusService/*"
     ]
+
+  neon3-funding:
+    container_name: bridge-devnet-neon3-funding
+    build:
+      dockerfile_inline: |
+        FROM ubuntu:24.04
+        RUN apt-get update && apt-get install -y curl jq
+    depends_on:
+      - neon3-node
+    volumes:
+      - ./tools/neon3-funding/:/root/neon3-funding
+      - ./tools/neon3-wallets:/root/neon3-wallets
+    environment:
+      - NEON3_RPC_URL=http://neon3-node:40332
+      - GAS_AMOUNT=10000000
+      - GAS_TOKEN_HASH=0xd2a4cff31913016155e38e474a2c06d08be276cf
+      - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
+    working_dir: /root/neon3-funding
+    command: [
+      "sh", "-c", 
+      "echo \"Funding accounts...\" \
+        && chmod u+x neon3-funding.sh \
+        && ./neon3-funding.sh $$FUNDED_ADDRESS $$GAS_AMOUNT \
+        echo \"Funding complete.\"
+      "
+      ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
   #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672

@@ -11,7 +11,7 @@ const KEYSTORE_PASSWORD_FILE = path.join(__dirname, NODE1_BASE_DIR, "password.tx
 const SENDER_ADDRESS = "0x74f4effb0b538baec703346b03b6d9292f53a4cd";
 
 const FUNDING_FILE = path.join(__dirname, "neox-funding.csv");
-const NEOX_WALLETS_DIR = path.join(__dirname, "../neox-wallets");
+const NEOX_WALLETS_DIR = path.join(__dirname, "./neox-wallets");
 
 // Funding amount for neox wallet addresses
 const NEOX_WALLET_FUNDING_AMOUNT_ETH = "100"; // 100 ETH for each wallet address

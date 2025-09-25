@@ -34,7 +34,7 @@ services:
       - neox-funding
     volumes:
       - ./bridge-evm-contracts:/app
-      - ./tools/neox-wallets:/app/wallets
+      - ./tools/neox-funding/neox-wallets:/app/wallets
     working_dir: /app
     environment:
       - NEOX_RPC_URL=http://neox-node:8562

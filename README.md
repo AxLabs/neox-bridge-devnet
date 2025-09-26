@@ -85,3 +85,15 @@ To verify that the nodes are up and responding via RPC:
    ```bash
    curl -s -X POST --json '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
    ```
+
+## Deployment of EVM message bridge contracts
+
+The EVM contracts are deployed automatically when the `deploy-message-bridge` service starts. It uses the wallets in the
+`tools/neox-wallets` folder to deploy the contracts. The deployment logs can be found in the `deploy-message-bridge`
+service logs.
+
+The service can be run manually if needed:
+
+```bash
+docker compose run --rm deploy-message-bridge
+```

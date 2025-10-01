@@ -27,22 +27,22 @@ services:
     ]
     restart: "no"
 
-#  deploy-message-bridge:
-#    container_name: bridge-devnet-deploy-message-bridge
-#    image: node:20
-#    depends_on:
-#      - neox-funding
-#    volumes:
-#      - ./bridge-evm-contracts:/app
-#      - ./tools/neox-funding/neox-wallets:/app/wallets
-#    working_dir: /app
-#    environment:
-#      - NEOX_RPC_URL=http://neox-node:8562
-#    command: >
-#      sh -c "npm install &&
-#             npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
-#             npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"
-#    restart: "no"
+  deploy-neox-message-bridge:
+    container_name: bridge-devnet-deploy-neox-message-bridge
+    image: node:20
+    depends_on:
+      - neox-funding
+    volumes:
+      - ./bridge-evm-contracts:/app
+      - ./tools/neox-funding/neox-wallets:/app/wallets
+    working_dir: /app
+    environment:
+      - NEOX_RPC_URL=http://neox-node:8562
+    command: >
+      sh -c "npm install &&
+             npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
+             npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"
+    restart: "no"
 
   neon3-node:
     container_name: bridge-devnet-neon3

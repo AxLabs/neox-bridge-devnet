@@ -4,3 +4,6 @@
 [submodule "bridge-evm-contracts"]
 	path = bridge-evm-contracts
 	url = git@github.com:bane-labs/bridge-evm-contracts.git
+[submodule "bridge-neo-contracts"]
+	path = bridge-neo-contracts
+	url = git@github.com:bane-labs/bridge-neo-contracts.git

@@ -11,7 +11,7 @@ services:
 
   neox-funding:
     container_name: bridge-devnet-neox-funding
-    image: node:18-alpine
+    image: node:20
     depends_on:
       - neox-node
       - neon3-node
@@ -39,7 +39,8 @@ services:
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
     command: >
-      sh -c "npm install &&
+      sh -c "rm -rf /app/.openzeppelin &&
+             npm install &&
              npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
              npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"
     restart: "no"

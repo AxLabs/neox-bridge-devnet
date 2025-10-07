@@ -34,19 +34,23 @@ services:
 
   deploy-neox-message-bridge:
     container_name: bridge-devnet-deploy-neox-message-bridge
-    image: node:20
+    build:
+      dockerfile_inline: |
+        FROM node:20
+        RUN apt-get update && apt-get install -y jq
     depends_on:
       - neox-node
     volumes:
       - ./bridge-evm-contracts:/app
+      - ./tools:/tools
       - ./tools/neox-funding/neox-wallets:/app/wallets
     working_dir: /app
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
-      - DEPLOYER_WALLET_JSON=./tools/neox-funding/neox-wallets/deployer.json
+      - DEPLOYER_WALLET_JSON=/app/wallets/deployer.json
     command: >
       sh -c "rm -rf /app/.openzeppelin &&
-             bash ./tools/deploy/wait-for-neox-funding.sh &&
+             bash /tools/deploy/wait-for-neox-funding.sh &&
              npm install &&
              npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
              npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"

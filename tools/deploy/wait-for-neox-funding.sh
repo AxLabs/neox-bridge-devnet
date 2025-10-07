@@ -25,10 +25,12 @@ if [ -z "$deployer_address" ] || [ "$deployer_address" == "0x" ]; then
   echo "Could not extract deployer address from $DEPLOYER_WALLET_JSON"
   exit 1
 fi
+
 # Convert to lowercase
 _deployer_address=$(echo "$deployer_address" | tr '[:upper:]' '[:lower:]')
 deployer_address="$_deployer_address"
-#validate address format
+
+# Validate address format
 if ! [[ "$deployer_address" =~ ^0x[a-f0-9]{40}$ ]]; then
   echo "Deployer address format is invalid: $deployer_address"
   exit 1
@@ -46,7 +48,7 @@ echo "neox-node is up. Checking deployer wallet funding..."
 
 # Wait for deployer wallet to be funded
 while true; do
-  balance_hex=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["'$deployer_address'", "latest"],"id":1}' -H "Content-Type: application/json" "$NEOX_RPC_URL" | jq -r .result)
+  balance_hex=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["'"$deployer_address"'", "latest"],"id":1}' -H "Content-Type: application/json" "$NEOX_RPC_URL" | jq -r .result)
   if [[ "$balance_hex" == "null" || -z "$balance_hex" ]]; then
     echo "Could not fetch balance. Retrying..."
     sleep $check_interval

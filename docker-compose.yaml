@@ -7,6 +7,12 @@ services:
       dockerfile: ../neox.Dockerfile
     ports:
       - 8562:8562
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 8562"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+      start_period: 5s
     command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node1/geth_node.log" ]
 
   neox-funding:
@@ -14,7 +20,6 @@ services:
     image: node:20
     depends_on:
       - neox-node
-      - neon3-node
     volumes:
       - ./tools:/app/tools
       - ./go-ethereum:/app/go-ethereum
@@ -31,15 +36,17 @@ services:
     container_name: bridge-devnet-deploy-neox-message-bridge
     image: node:20
     depends_on:
-      - neox-funding
+      - neox-node
     volumes:
       - ./bridge-evm-contracts:/app
       - ./tools/neox-funding/neox-wallets:/app/wallets
     working_dir: /app
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
+      - DEPLOYER_WALLET_JSON=./tools/neox-funding/neox-wallets/deployer.json
     command: >
       sh -c "rm -rf /app/.openzeppelin &&
+             bash ./tools/deploy/wait-for-neox-funding.sh &&
              npm install &&
              npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
              npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"
@@ -50,6 +57,12 @@ services:
     image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.8.2
     ports:
       - 40332:40332
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 40332"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+      start_period: 5s
     volumes:
       - ./neon3-config/config-consensus.privatenet3.json:/neo-cli/config.json:ro
       - ./neon3-config/wallet-consensus.privatenet3.json:/neo-cli/wallet.json:ro

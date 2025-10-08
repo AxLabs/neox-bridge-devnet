@@ -323,7 +323,20 @@ async function main() {
     const sourceInfo = entry.source ? ` [from ${entry.source}]` : ' [from CSV]';
     console.log(`\n[${i + 1}/${allFundingData.length}] Processing ${entry.address}${sourceInfo}...`);
 
-    if (await transferETH(wallet, entry.address, entry.amountWei)) {
+    // Check current balance before deciding to fund
+    let currentBalance;
+    try {
+      currentBalance = await provider.getBalance(entry.address);
+    } catch (err) {
+      console.error(`   Error fetching balance for ${entry.address}:`, err.message);
+      failedTransfers++;
+      continue;
+    }
+    if (currentBalance >= entry.amountWei) {
+      console.log(`   Skipping: Address already has ${ethers.formatEther(currentBalance)} ETH (required: ${ethers.formatEther(entry.amountWei)} ETH)`);
+      successfulTransfers++;
+      continue;
+    } else if (await transferETH(wallet, entry.address, entry.amountWei)) {
       successfulTransfers++;
     } else {
       failedTransfers++;

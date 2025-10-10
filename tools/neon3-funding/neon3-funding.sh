@@ -82,11 +82,11 @@ send_gas() {
     local gas_balance
     gas_balance=$(get_gas_balance "$address")
     # Ensure gas_balance is a valid integer
-    if [[ "$gas_balance" =~ ^[0-9]+$ ]] && [ "$gas_balance" -ge 10000000 ]; then
-        echo "GAS balance is greater than or equal to 10000000 ($gas_balance), skipping GAS transfer for $address"
+    if [[ "$gas_balance" =~ ^[0-9]+$ ]] && [ "$gas_balance" -ge 10000000000 ]; then
+        echo "GAS balance is greater than or equal to 100_00000000 ($gas_balance), skipping GAS transfer for $address"
         return
     fi
-    echo "GAS balance is less than 10000000 ($gas_balance), sending $amount GAS to $address"
+    echo "GAS balance is less than 100_00000000 ($gas_balance), sending $amount GAS to $address"
     local response
     response=$(curl -s -X POST "$NEON3_RPC_URL" \
         -H "Content-Type: application/json" \

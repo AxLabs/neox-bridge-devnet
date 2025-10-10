@@ -59,7 +59,10 @@ services:
     ports:
       - 40332:40332
     healthcheck:
-      test: ["CMD", "sh", "-c", "nc -z localhost 40332"]
+      test: ["CMD-SHELL", "curl -sSf -X POST http://127.0.0.1:40332 \
+        -H 'Content-Type: application/json' \
+        -d '{\"jsonrpc\":\"2.0\",\"method\":\"getversion\",\"params\":[],\"id\":1}' \
+        | grep -q 'Neo'"]
       interval: 3s
       timeout: 2s
       retries: 20

@@ -1,0 +1,14 @@
+FROM openjdk:8-jdk
+
+RUN apt-get update \
+    && \
+    apt-get install -y netcat coreutils curl expect \
+    && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /contracts
+COPY . /contracts
+
+RUN ./gradlew dependencies
+RUN ./gradlew neow3jCompile -PclassName=network.bane.bridge.MessageBridgeContract
+RUN ./gradlew neow3jCompile -PclassName=network.bane.management.BridgeManagementContract

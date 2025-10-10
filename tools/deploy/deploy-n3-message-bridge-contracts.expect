@@ -1,0 +1,36 @@
+#!/usr/bin/expect
+
+# Set timeout to never expire
+set timeout -1
+
+# Spawn the command that outputs the contract hashes
+spawn sh gradlew -q -PmainClass=network.bane.scripts.DeployMessageBridgeContracts run
+
+# Wait for the management contract hash to appear and capture it
+expect -re {BridgeManagement contract hash: ([0-9a-f]+)} {
+    set managementHash $expect_out(1,string)
+}
+
+set fileId [open "/state_data/management_contract.txt" "w"]
+puts $fileId $managementHash
+close $fileId
+
+# Wait for the message bridge contract hash to appear and capture it
+expect -re {MessageBridge contract hash:    ([0-9a-f]+)} {
+    set messageBridgeHash $expect_out(1,string)
+}
+
+# Output the message bridge contract hash to a file
+set fileId [open "/state_data/message_bridge_contract.txt" "w"]
+puts $fileId $messageBridgeHash
+close $fileId
+
+# Wait for the execution manager contract hash to appear and capture it
+expect -re {ExecutionManager contract hash: ([0-9a-f]+)} {
+    set executionManagerHash $expect_out(1,string)
+}
+
+# Output the execution manager contract hash to a file
+set fileId [open "/state_data/execution_manager_contract.txt" "w"]
+puts $fileId $executionManagerHash
+close $fileId

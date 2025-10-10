@@ -13,6 +13,7 @@ services:
       timeout: 2s
       retries: 20
       start_period: 5s
+    init: true  # This ensures proper signal handling - https://github.com/krallin/tini/issues/8#issuecomment-146135930
     command: [ "sh", "-c", "make RESTRICTED_NETWORK=0.0.0.0/0 privnet_start && tail -F ./privnet/single/node1/geth_node.log" ]
 
   neox-funding:
@@ -48,12 +49,8 @@ services:
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
       - DEPLOYER_WALLET_JSON=/app/wallets/deployer.json
-    command: >
-      sh -c "rm -rf /app/.openzeppelin &&
-             bash /tools/deploy/wait-for-neox-funding.sh &&
-             npm install &&
-             npx hardhat vars set NEOX_DEVNET_RPC_URL $$NEOX_RPC_URL &&
-             npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet"
+    command: ["bash", "/tools/deploy/deploy-message-bridge-with-extraction.sh"]
+    init: true
     restart: "no"
 
   neon3-node:
@@ -74,6 +71,7 @@ services:
       - ./neon3-config/dbft.config-consensus.json:/neo-cli/Plugins/DBFTPlugin/DBFTPlugin.json:ro
       - ./neon3-config/applicationlogs.config-consensus.json:/neo-cli/Plugins/ApplicationLogs/ApplicationLogs.json:ro
       - ./neon3-config/tokentracker.config-consensus.json:/neo-cli/Plugins/TokensTracker/TokensTracker.json:ro
+    init: true
     entrypoint: [
       "sh", "-c",
       "screen -dmS neo-node dotnet neo-cli.dll && sleep 5 && tail -f ./Logs/ConsensusService/*"
@@ -119,6 +117,7 @@ services:
       - 15672:15672
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    init: true
 #    healthcheck:
 #      test: ["CMD", "rabbitmq-diagnostics", "ping"]
 #      interval: 30s

@@ -9,7 +9,7 @@ OUTPUT_FILE="/tools/addresses/neox-addresses.json"
 # Function to extract a specific contract address from the log
 extract_contract_address() {
     local contract_name="$1"
-    grep -i "$contract_name" "$LOG_FILE" | awk -F': ' '{print $2}' | tr -d ' ' | head -1
+    grep -i "$contract_name" "$LOG_FILE" | grep -oE '0x[a-fA-F0-9]{40}' | head -1
 }
 
 # Function to extract addresses
@@ -55,7 +55,7 @@ cleanup() {
 }
 
 # Trap multiple signals
-trap cleanup SIGTERM SIGINT SIGQUIT EXIT
+trap cleanup SIGTERM SIGINT SIGQUIT
 
 echo "Starting message bridge deployment..."
 

@@ -112,7 +112,9 @@ services:
       context: ./
       dockerfile_inline: |
         FROM openjdk:8-jdk
-        RUN apt-get update && apt-get install -y netcat coreutils curl expect && rm -rf /var/lib/apt/lists/*
+        RUN apt-get update \
+          && apt-get install -y netcat coreutils curl expect vim-common \
+          && rm -rf /var/lib/apt/lists/*
         WORKDIR /n3-contracts
     depends_on:
       - neon3-node
@@ -127,16 +129,13 @@ services:
       - NEON3_DEPLOYER_PASSWORD=
       - NEON3_OWNER_WALLET=/n3-wallets/owner.json
       - NEON3_OWNER_PASSWORD=
-      - NEON3_GOVERNOR_PUBKEY=027b4f2d5532daa8a16a324dd0033e6cd4a495e8f4ae05b731e873608b94d91e28
-      - NEON3_RELAYER_PUBKEY=03fbdd9280e27c831597f345bbd87fede94d95e852f0b28868e073220c4243ca81
       - NEON3_NR_VALIDATORS=2
       - NEON3_VALIDATOR_THRESHOLD=2
-      - NEON3_VALIDATOR1_PUBKEY=02c884c593d2706c7c372d7770e987520c347654312b039a76d83bf822036f10f4
-      - NEON3_VALIDATOR2_PUBKEY=02a0150e31043503248d2e3cb1e55011062d19a02a2da82f3cb55d9a1b967a601d
     entrypoint: [
-      "sh", "-c",
-      "sh /tools/wait/wait-for --timeout=0 neon3-node:40332 -- sleep 5 && expect -n
-      /tools/deploy/deploy-n3-message-bridge-contracts.expect"
+      "bash", "-c",
+      "source /tools/utils/extract-pubkeys.sh /n3-wallets \
+      && sh /tools/wait/wait-for --timeout=0 neon3-node:40332 -- sleep 5 \
+      && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect"
     ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)

@@ -174,16 +174,12 @@ async function waitForNodeReady(provider, maxRetries = 60) {
 }
 
 /**
- * Transfer ETH to a single address
+ * Send ETH transaction without waiting for confirmation
  */
-async function transferETH(wallet, toAddress, amountWei) {
+async function sendETHTransaction(wallet, toAddress, amountWei) {
   try {
-    console.log(`\nTransferring to ${toAddress}...`);
+    console.log(`   Sending transaction to ${toAddress}...`);
     console.log(`   Amount: ${amountWei} wei (${ethers.formatEther(amountWei)} ETH)`);
-
-    // Check balance before transfer
-    const balanceBefore = await wallet.provider.getBalance(toAddress);
-    console.log(`   Balance before: ${ethers.formatEther(balanceBefore)} ETH`);
 
     // Use EIP-1559 gas pricing for neox network
     const tx = await wallet.sendTransaction({
@@ -196,27 +192,38 @@ async function transferETH(wallet, toAddress, amountWei) {
     });
 
     console.log(`   Transaction hash: ${tx.hash}`);
+    return { success: true, txHash: tx.hash, tx: tx };
+  } catch (error) {
+    console.error(`   Error sending transaction to ${toAddress}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
 
-    const receipt = await tx.wait();
+/**
+ * Wait for transaction confirmation and verify
+ */
+async function verifyTransaction(provider, txHash, toAddress) {
+  try {
+    console.log(`   Verifying transaction ${txHash}...`);
+
+    const receipt = await provider.waitForTransaction(txHash, 1, 60000); // Wait up to 60 seconds
 
     if (receipt?.status === 1) {
       // Check balance after transfer
-      const balanceAfter = await wallet.provider.getBalance(toAddress);
-      const balanceIncrease = balanceAfter - balanceBefore;
+      const balanceAfter = await provider.getBalance(toAddress);
 
-      console.log(`   Transfer successful!`);
+      console.log(`   Transaction confirmed!`);
       console.log(`   Balance after: ${ethers.formatEther(balanceAfter)} ETH`);
-      console.log(`   Balance increase: ${ethers.formatEther(balanceIncrease)} ETH`);
       console.log(`   Gas used: ${receipt.gasUsed}`);
       console.log(`   Block: ${receipt.blockNumber}`);
-      return true;
+      return { success: true, receipt: receipt };
     } else {
-      console.log(`   Transfer failed`);
-      return false;
+      console.log(`   Transaction failed (status: ${receipt?.status})`);
+      return { success: false, error: 'Transaction failed' };
     }
   } catch (error) {
-    console.error(`   Error transferring to ${toAddress}:`, error.message);
-    return false;
+    console.error(`   Error verifying transaction ${txHash}:`, error.message);
+    return { success: false, error: error.message };
   }
 }
 
@@ -313,10 +320,11 @@ async function main() {
 
   console.log("Sufficient balance available");
 
-  // Start transfers
-  console.log("\nStarting transfers...");
-  let successfulTransfers = 0;
-  let failedTransfers = 0;
+  // First pass: Check balances and send all transactions
+  console.log("\nPhase 1: Checking balances and sending transactions...");
+  const pendingTransactions = [];
+  let skippedTransfers = 0;
+  let failedToSend = 0;
 
   for (let i = 0; i < allFundingData.length; i++) {
     const entry = allFundingData[i];
@@ -329,24 +337,60 @@ async function main() {
       currentBalance = await provider.getBalance(entry.address);
     } catch (err) {
       console.error(`   Error fetching balance for ${entry.address}:`, err.message);
-      failedTransfers++;
+      failedToSend++;
       continue;
     }
+
     if (currentBalance >= entry.amountWei) {
       console.log(`   Skipping: Address already has ${ethers.formatEther(currentBalance)} ETH (required: ${ethers.formatEther(entry.amountWei)} ETH)`);
-      successfulTransfers++;
+      skippedTransfers++;
       continue;
-    } else if (await transferETH(wallet, entry.address, entry.amountWei)) {
+    }
+
+    // Send transaction without waiting for confirmation
+    const result = await sendETHTransaction(wallet, entry.address, entry.amountWei);
+    if (result.success) {
+      pendingTransactions.push({
+        txHash: result.txHash,
+        address: entry.address,
+        amount: entry.amountWei,
+        sourceInfo: sourceInfo,
+        index: i + 1
+      });
+    } else {
+      failedToSend++;
+    }
+
+    // Small delay between transaction sends to avoid overwhelming the node
+    if (i < allFundingData.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  console.log(`\nPhase 1 Summary:`);
+  console.log(`   Transactions sent: ${pendingTransactions.length}`);
+  console.log(`   Addresses skipped (already funded): ${skippedTransfers}`);
+  console.log(`   Failed to send: ${failedToSend}`);
+
+  // Second pass: Verify all pending transactions
+  console.log("\nPhase 2: Verifying transaction confirmations...");
+  let successfulTransfers = 0;
+  let failedTransfers = 0;
+
+  for (let i = 0; i < pendingTransactions.length; i++) {
+    const pending = pendingTransactions[i];
+    console.log(`\n[${i + 1}/${pendingTransactions.length}] Verifying ${pending.address}${pending.sourceInfo} (tx: ${pending.txHash})...`);
+
+    const result = await verifyTransaction(provider, pending.txHash, pending.address);
+    if (result.success) {
       successfulTransfers++;
     } else {
       failedTransfers++;
     }
-
-    // Small delay between transactions
-    if (i < allFundingData.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
   }
+
+  // Add skipped transfers to successful count (they were already funded)
+  successfulTransfers += skippedTransfers;
 
   // Summary
   console.log("\n" + "=" + "=".repeat(59));

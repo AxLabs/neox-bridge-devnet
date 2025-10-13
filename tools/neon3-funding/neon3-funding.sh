@@ -75,7 +75,6 @@ get_gas_balance() {
             \"params\": [\"$address\"],
             \"id\": 2
         }")
-    echo "Balance response: $response" >&2
     local balance
     balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
     if [ -z "$balance" ] || [ "$balance" = "null" ]; then
@@ -85,17 +84,25 @@ get_gas_balance() {
     echo "$balance"
 }
 
-send_gas() {
+check_and_send_gas_transaction() {
     local address="$1"
     local amount="$2"
     local gas_balance
-    gas_balance=$(get_gas_balance "$address")
+    gas_balance=$(get_gas_balance "$address" 2>/dev/null)
     # Ensure gas_balance is a valid integer
     if [[ "$gas_balance" =~ ^[0-9]+$ ]] && [ "$gas_balance" -ge 10000000000 ]; then
-        echo "GAS balance is greater than or equal to 100_00000000 ($gas_balance), skipping GAS transfer for $address"
+        echo "GAS balance is greater than or equal to 100_00000000 ($gas_balance), skipping GAS transfer for $address" >&2
+        echo "SKIP"
         return
     fi
-    echo "GAS balance is less than 100_00000000 ($gas_balance), sending $amount GAS to $address"
+    echo "GAS balance is less than 100_00000000 ($gas_balance), sending $amount GAS to $address" >&2
+    send_gas_transaction "$address" "$amount"
+}
+
+send_gas_transaction() {
+    local address="$1"
+    local amount="$2"
+    echo "   Sending transaction to $address..." >&2
     local response
     response=$(curl -s -X POST "$NEON3_RPC_URL" \
         -H "Content-Type: application/json" \
@@ -105,19 +112,26 @@ send_gas() {
             \"params\": [\"$GAS_TOKEN_HASH\", \"$address\", $amount],
             \"id\": 3
         }")
-    echo "Send response: $response"
     local tx_hash
     tx_hash=$(echo "$response" | jq -r '.result.hash // empty')
     if [ -n "$tx_hash" ]; then
-        echo "Transaction successful! Hash: $tx_hash"
-        wait_for_confirmation "$tx_hash"
-        gas_balance=$(get_gas_balance "$address")
-        echo "New GAS balance for $address: $gas_balance"
+        echo "   Transaction sent! Hash: $tx_hash" >&2
+        echo "$tx_hash"
     else
-        echo "Error: Transaction failed"
-        echo "Response: $response"
-        exit 1
+        echo "   Error: Transaction failed" >&2
+        echo "   Response: $response" >&2
+        echo "FAILED"
     fi
+}
+
+verify_gas_transaction() {
+    local tx_hash="$1"
+    local address="$2"
+    echo "   Verifying transaction $tx_hash for $address..."
+    wait_for_confirmation "$tx_hash"
+    local gas_balance
+    gas_balance=$(get_gas_balance "$address")
+    echo "   New GAS balance for $address: $gas_balance"
 }
 
 wait_for_confirmation() {
@@ -153,22 +167,69 @@ fund_all_wallets() {
     wallets_dir="$(dirname "$0")/neon3-wallets"
     local amount="$1"
     echo "Funding all addresses in wallet files in $wallets_dir with $amount GAS..."
+
+    # Arrays to store pending transactions
+    declare -a pending_txs=()
+    declare -a pending_addresses=()
+    local total_addresses=0
+    local skipped_count=0
+    local failed_to_send=0
+
+    # Phase 1: Check balances and send all transactions
+    echo ""
+    echo "Phase 1: Checking balances and sending transactions..."
     for wallet_file in "$wallets_dir"/*.json; do
         if [ ! -f "$wallet_file" ]; then
             continue
         fi
+        echo ""
         echo "Processing wallet file: $wallet_file"
         # Extract all addresses from the accounts array
         local addresses
         addresses=$(jq -r '.accounts[].address' "$wallet_file" 2>/dev/null)
         for address in $addresses; do
             if [ -n "$address" ]; then
-                echo "Funding $address from $wallet_file with $amount GAS..."
-                send_gas "$address" "$amount"
+                total_addresses=$((total_addresses + 1))
+                echo "[$total_addresses] Processing $address from $(basename "$wallet_file")..."
+                local result
+                result=$(check_and_send_gas_transaction "$address" "$amount")
+                if [ "$result" = "SKIP" ]; then
+                    skipped_count=$((skipped_count + 1))
+                elif [ "$result" = "FAILED" ]; then
+                    failed_to_send=$((failed_to_send + 1))
+                else
+                    # result contains the transaction hash
+                    pending_txs+=("$result")
+                    pending_addresses+=("$address")
+                fi
+                # Small delay between sends
+                sleep 0.5
             fi
         done
     done
-    echo "All wallet addresses funded."
+
+    echo ""
+    echo "Phase 1 Summary:"
+    echo "   Total addresses processed: $total_addresses"
+    echo "   Transactions sent: ${#pending_txs[@]}"
+    echo "   Addresses skipped (already funded): $skipped_count"
+    echo "   Failed to send: $failed_to_send"
+
+    # Phase 2: Verify all pending transactions
+    if [ ${#pending_txs[@]} -gt 0 ]; then
+        echo ""
+        echo "Phase 2: Verifying transaction confirmations..."
+        for i in "${!pending_txs[@]}"; do
+            local tx_hash="${pending_txs[$i]}"
+            local address="${pending_addresses[$i]}"
+            echo ""
+            echo "[$((i + 1))/${#pending_txs[@]}] Verifying $address (tx: $tx_hash)..."
+            verify_gas_transaction "$tx_hash" "$address"
+        done
+    fi
+
+    echo ""
+    echo "All wallet addresses processing completed."
 }
 
 set -e  # Exit on any error
@@ -187,6 +248,18 @@ wait_for_node "$NEON3_RPC_URL"
 open_wallet
 fund_all_wallets "$AMOUNT_TO_FUND"
 
-send_gas "$ADDRESS_TO_FUND" "$AMOUNT_TO_FUND"
+# Fund the specific address using two-phase approach
+echo ""
+echo "Funding specific address: $ADDRESS_TO_FUND with $AMOUNT_TO_FUND GAS..."
+result=$(check_and_send_gas_transaction "$ADDRESS_TO_FUND" "$AMOUNT_TO_FUND")
+if [ "$result" = "SKIP" ]; then
+    echo "Address $ADDRESS_TO_FUND already has sufficient GAS balance"
+elif [ "$result" = "FAILED" ]; then
+    echo "Failed to send transaction to $ADDRESS_TO_FUND"
+    exit 1
+else
+    echo "Verifying transaction for $ADDRESS_TO_FUND..."
+    verify_gas_transaction "$result" "$ADDRESS_TO_FUND"
+fi
 
 echo "Script completed successfully"

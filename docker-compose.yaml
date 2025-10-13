@@ -33,7 +33,7 @@ services:
     ]
     restart: "no"
 
-  deploy-neox-message-bridge:
+  neox-contracts:
     container_name: bridge-devnet-deploy-neox-message-bridge
     build:
       dockerfile_inline: |
@@ -89,14 +89,13 @@ services:
     depends_on:
       - neon3-node
     volumes:
-      - ./tools/neon3-funding/:/root/neon3-funding
-      - ./tools/neon3-wallets:/root/neon3-wallets
+      - ./tools:/tools
     environment:
       - NEON3_RPC_URL=http://neon3-node:40332
       - GAS_AMOUNT=10000000000
       - GAS_TOKEN_HASH=0xd2a4cff31913016155e38e474a2c06d08be276cf
       - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
-    working_dir: /root/neon3-funding
+    working_dir: /tools/neon3-funding
     command: [
       "sh", "-c", 
       "echo \"Funding accounts...\" \

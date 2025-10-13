@@ -28,15 +28,13 @@ extract_addresses() {
     MESSAGE_BRIDGE_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "Message Bridge Proxy deployed at:")
     MESSAGE_BRIDGE_LOGIC=$(extract_contract_address_from_log "$LOG_FILE" "Message Bridge Logic deployed at:")
     EXECUTION_MANAGER=$(extract_contract_address_from_log "$LOG_FILE" "Execution Manager deployed at:")
-    MESSAGE_EXECUTOR=$(extract_contract_address_from_log "$LOG_FILE" "Message Executor:")
 
     echo "Creating JSON output..."
     output_to_json "$OUTPUT_FILE" \
         "bridgeManagement" "$BRIDGE_MANAGEMENT_PROXY" \
         "messageBridgeProxy" "$MESSAGE_BRIDGE_PROXY" \
         "messageBridgeLogic" "$MESSAGE_BRIDGE_LOGIC" \
-        "executionManager" "$EXECUTION_MANAGER" \
-        "messageExecutor" "$MESSAGE_EXECUTOR"
+        "executionManager" "$EXECUTION_MANAGER"
 
     echo "Addresses extracted and saved to: $OUTPUT_FILE"
     echo "Contents:"

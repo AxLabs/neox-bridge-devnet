@@ -18,6 +18,7 @@ wait_for_node() {
 }
 
 # Function to validate 40-character hex format (addresses, token hashes, script hashes)
+# Accepts both formats: with 0x prefix or without (40 hex characters)
 # Usage: validate_hex40_format <hex_value>
 validate_hex40_format() {
     local hex_value="$1"
@@ -27,12 +28,18 @@ validate_hex40_format() {
         return 1
     fi
 
-    if ! [[ "$hex_value" =~ ^0x[a-fA-F0-9]{40}$ ]]; then
-        echo "Invalid hex format (expected 0x + 40 hex chars): $hex_value"
-        return 1
+    # Check for 0x prefix format (42 characters total)
+    if [[ "$hex_value" =~ ^0x[a-fA-F0-9]{40}$ ]]; then
+        return 0
     fi
 
-    return 0
+    # Check for format without 0x prefix (40 characters total)
+    if [[ "$hex_value" =~ ^[a-fA-F0-9]{40}$ ]]; then
+        return 0
+    fi
+
+    echo "Invalid hex format (expected 40 hex chars with or without 0x prefix): $hex_value"
+    return 1
 }
 
 # Function to extract a specific contract address from the log. Address validation is performed.
@@ -73,7 +80,7 @@ extract_contract_address_from_log() {
     echo "$extracted_address"
 }
 
-# Function to read deployer address from wallet JSON
+# Function to read address from wallet JSON (supports both NEO N3 and Ethereum wallet formats)
 # Usage: read_wallet_address <wallet_json_file>
 read_wallet_address() {
     local wallet_json="$1"
@@ -89,21 +96,36 @@ read_wallet_address() {
         return 1
     fi
 
-    # Extract address from JSON
-    local address
-    address="0x$(jq -r .address "$wallet_json")"
-    if [ -z "$address" ] || [ "$address" == "0x" ]; then
+    local address=""
+
+    # Try to extract address using different wallet formats
+    # First try Ethereum wallet format (direct address field)
+    address=$(jq -r '.address // empty' "$wallet_json" 2>/dev/null)
+
+    # If not found, try NEO N3 wallet format (accounts[0].address)
+    if [ -z "$address" ]; then
+        address=$(jq -r '.accounts[0].address // empty' "$wallet_json" 2>/dev/null)
+    fi
+
+    if [ -z "$address" ]; then
         echo "Could not extract wallet address from $wallet_json"
         return 1
     fi
 
-    # Convert to lowercase
-    address=$(echo "$address" | tr '[:upper:]' '[:lower:]')
-
-    # Validate address format
-    validate_hex40_format "$address"
-
-    echo "$address"
+    # Handle different address formats
+    if [[ "$address" =~ ^[A-Za-z0-9]{34}$ ]]; then
+        # NEO N3 address (Base58 format) - return as-is
+        echo "$address"
+        return 0
+    elif [[ "$address" =~ ^(0x)?[0-9a-fA-F]{40}$ ]]; then
+        # Ethereum address (with or without 0x prefix)
+        [[ "$address" != 0x* ]] && address="0x$address"
+        address=$(echo "$address" | tr '[:upper:]' '[:lower:]')
+        validate_hex40_format "$address" && echo "$address"
+    else
+        echo "Invalid address format: $address"
+        return 1
+    fi
 }
 
 # Function to create JSON output from key-value pairs

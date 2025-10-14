@@ -17,6 +17,52 @@ wait_for_node() {
     done
 }
 
+# Function to get NEO N3 GAS balance in decimal format
+get_neo3_balance() {
+    local node_url="$1"
+    local address="$2"
+    local response
+    response=$(curl -s -X POST "$node_url" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"jsonrpc\": \"2.0\",
+            \"method\": \"getnep17balances\",
+            \"params\": [\"$address\"],
+            \"id\": 2
+        }")
+
+    # Extract GAS balance (using standard GAS token hash)
+    local GAS_TOKEN_HASH="${GAS_TOKEN_HASH:-0xd2a4cff31913016155e38e474a2c06d08be276cf}"
+
+    # Check if the response has a valid result and balance array
+    if echo "$response" | jq -e '.result.balance' >/dev/null 2>&1; then
+        local balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
+    else
+        local balance="0"
+    fi
+
+    if [[ "$balance" == "null" || -z "$balance" ]]; then
+        echo "0"
+    else
+        echo "$balance"
+    fi
+}
+
+# Function to get Ethereum balance in decimal format (wei)
+get_ethereum_balance() {
+    local node_url="$1"
+    local address="$2"
+    local balance_hex
+    balance_hex=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["'"$address"'", "latest"],"id":1}' -H "Content-Type: application/json" "$node_url" | jq -r .result)
+
+    if [[ "$balance_hex" == "null" || -z "$balance_hex" ]]; then
+        echo "0"
+    else
+        local balance_dec=$((16#${balance_hex:2}))
+        echo "$balance_dec"
+    fi
+}
+
 # Function to validate 40-character hex format (addresses, token hashes, script hashes)
 # Accepts both formats: with 0x prefix or without (40 hex characters)
 # Usage: validate_hex40_format <hex_value>

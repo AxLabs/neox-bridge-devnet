@@ -59,7 +59,10 @@ services:
     ports:
       - 40332:40332
     healthcheck:
-      test: ["CMD", "sh", "-c", "nc -z localhost 40332"]
+      test: ["CMD-SHELL", "curl -sSf -X POST http://127.0.0.1:40332 \
+        -H 'Content-Type: application/json' \
+        -d '{\"jsonrpc\":\"2.0\",\"method\":\"getversion\",\"params\":[],\"id\":1}' \
+        | grep -q 'Neo'"]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -102,6 +105,39 @@ services:
         echo \"Funding complete.\"
       "
       ]
+
+  neon3-contracts:
+    container_name: bridge-devnet-deploy-n3-message-bridge
+    build:
+      context: ./
+      dockerfile_inline: |
+        FROM openjdk:8-jdk
+        RUN apt-get update && apt-get install -y netcat coreutils curl expect && rm -rf /var/lib/apt/lists/*
+        WORKDIR /n3-contracts
+    depends_on:
+      - neon3-node
+    volumes:
+      - ./bridge-neo-contracts:/n3-contracts:rw
+      - ./tools:/tools
+      - ./tools/neon3-funding/neon3-wallets:/n3-wallets:ro
+    working_dir: /n3-contracts
+    environment:
+      - NEON3_JSON_RPC=http://neon3-node:40332
+      - NEON3_DEPLOYER_WALLET=/n3-wallets/deployer.json
+      - NEON3_DEPLOYER_PASSWORD=
+      - NEON3_OWNER_WALLET=/n3-wallets/owner.json
+      - NEON3_OWNER_PASSWORD=
+      - NEON3_GOVERNOR_PUBKEY=027b4f2d5532daa8a16a324dd0033e6cd4a495e8f4ae05b731e873608b94d91e28
+      - NEON3_RELAYER_PUBKEY=03fbdd9280e27c831597f345bbd87fede94d95e852f0b28868e073220c4243ca81
+      - NEON3_NR_VALIDATORS=2
+      - NEON3_VALIDATOR_THRESHOLD=2
+      - NEON3_VALIDATOR1_PUBKEY=02c884c593d2706c7c372d7770e987520c347654312b039a76d83bf822036f10f4
+      - NEON3_VALIDATOR2_PUBKEY=02a0150e31043503248d2e3cb1e55011062d19a02a2da82f3cb55d9a1b967a601d
+    entrypoint: [
+      "sh", "-c",
+      "sh /tools/wait/wait-for --timeout=0 neon3-node:40332 -- sleep 5 && expect -n
+      /tools/deploy/deploy-n3-message-bridge-contracts.expect"
+    ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)
   #  RabbitMQ AMQP: amqp://admin:admin123@localhost:5672

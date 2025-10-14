@@ -1,0 +1,33 @@
+#!/usr/bin/expect
+
+# Set timeout to never expire
+set timeout -1
+
+# Spawn the command that outputs the contract hashes
+spawn sh gradlew -q -PmainClass=network.bane.scripts.DeployMessageBridgeContracts run
+
+# Wait for the management contract hash to appear and capture it
+expect -re {BridgeManagement contract hash: ([0-9a-f]+)} {
+    set managementHash $expect_out(1,string)
+}
+
+# Wait for the message bridge contract hash to appear and capture it
+expect -re {MessageBridge contract hash:    ([0-9a-f]+)} {
+    set messageBridgeHash $expect_out(1,string)
+}
+
+# Wait for the execution manager contract hash to appear and capture it
+expect -re {ExecutionManager contract hash: ([0-9a-f]+)} {
+    set executionManagerHash $expect_out(1,string)
+}
+
+# Write all contract hashes to a single JSON file
+set fileId [open "/tools/addresses/n3-addresses.json" "w"]
+set json "{\n"
+append json "  \"management\": \"$managementHash\",\n"
+append json "  \"messageBridge\": \"$messageBridgeHash\",\n"
+append json "  \"executionManager\": \"$executionManagerHash\"\n"
+append json "}"
+fconfigure $fileId -encoding utf-8 -translation lf
+puts -nonewline $fileId $json
+close $fileId

@@ -21,6 +21,9 @@ expect -re {ExecutionManager contract hash: ([0-9a-f]+)} {
     set executionManagerHash $expect_out(1,string)
 }
 
+# Create the directory if it doesn't exist
+file mkdir "/tools/addresses"
+
 # Write all contract hashes to a single JSON file
 set fileId [open "/tools/addresses/n3-addresses.json" "w"]
 set json "{\n"

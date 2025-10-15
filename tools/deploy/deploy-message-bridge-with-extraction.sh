@@ -24,15 +24,21 @@ extract_addresses() {
     mkdir -p "$(dirname "$OUTPUT_FILE")"
 
     # Extract addresses using the helper function
-    BRIDGE_MANAGEMENT_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "Bridge Management deployed at:")
-    MESSAGE_BRIDGE_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "Message Bridge Proxy deployed at:")
-    MESSAGE_BRIDGE_LOGIC=$(extract_contract_address_from_log "$LOG_FILE" "Message Bridge Logic deployed at:")
-    EXECUTION_MANAGER=$(extract_contract_address_from_log "$LOG_FILE" "Execution Manager deployed at:")
+    BRIDGE_MANAGEMENT_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "BridgeManagement Proxy:")
+    BRIDGE_MANAGEMENT_LOGIC=$(extract_contract_address_from_log "$LOG_FILE" "BridgeManagement Logic:")
+    BRIDGE_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "Bridge Proxy:")
+    BRIDGE_LOGIC=$(extract_contract_address_from_log "$LOG_FILE" "Bridge Logic:")
+    MESSAGE_BRIDGE_PROXY=$(extract_contract_address_from_log "$LOG_FILE" "MessageBridge Proxy:")
+    MESSAGE_BRIDGE_LOGIC=$(extract_contract_address_from_log "$LOG_FILE" "MessageBridge Logic:")
+    EXECUTION_MANAGER=$(extract_contract_address_from_log "$LOG_FILE" "ExecutionManager:")
 
     echo "Creating JSON output..."
     output_to_json "$OUTPUT_FILE" \
         "bridgeManagement" "$BRIDGE_MANAGEMENT_PROXY" \
-        "messageBridgeProxy" "$MESSAGE_BRIDGE_PROXY" \
+        "bridgeManagementLogic" "$BRIDGE_MANAGEMENT_LOGIC" \
+        "bridge" "$BRIDGE_PROXY" \
+        "bridgeLogic" "$BRIDGE_LOGIC" \
+        "messageBridge" "$MESSAGE_BRIDGE_PROXY" \
         "messageBridgeLogic" "$MESSAGE_BRIDGE_LOGIC" \
         "executionManager" "$EXECUTION_MANAGER"
 
@@ -58,7 +64,7 @@ rm -rf /app/.openzeppelin
 bash /tools/deploy/wait-for-neox-funding.sh
 npm install
 npx hardhat vars set NEOX_DEVNET_RPC_URL "$NEOX_RPC_URL"
-npx hardhat run scripts/deployMessageBridge.ts --network neoxDevnet | tee "$LOG_FILE"
+npx hardhat run scripts/deployAll.ts --network neoxDevnet | tee "$LOG_FILE"
 
 # Extract addresses after successful deployment
 extract_addresses

@@ -33,7 +33,7 @@ services:
     ]
     restart: "no"
 
-  deploy-neox-message-bridge:
+  neox-contracts:
     container_name: bridge-devnet-deploy-neox-message-bridge
     build:
       dockerfile_inline: |
@@ -89,14 +89,13 @@ services:
     depends_on:
       - neon3-node
     volumes:
-      - ./tools/neon3-funding/:/root/neon3-funding
-      - ./tools/neon3-wallets:/root/neon3-wallets
+      - ./tools:/tools
     environment:
       - NEON3_RPC_URL=http://neon3-node:40332
       - GAS_AMOUNT=10000000000
       - GAS_TOKEN_HASH=0xd2a4cff31913016155e38e474a2c06d08be276cf
       - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
-    working_dir: /root/neon3-funding
+    working_dir: /tools/neon3-funding
     command: [
       "sh", "-c", 
       "echo \"Funding accounts...\" \
@@ -114,7 +113,10 @@ services:
         FROM openjdk:8-jdk
         RUN apt-get update \
           && apt-get install -y netcat coreutils curl expect vim-common \
-          && rm -rf /var/lib/apt/lists/*
+          && rm -rf /var/lib/apt/lists/* \
+          && wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 \
+          && mv jq-linux64 /usr/local/bin/jq \
+          && chmod +x /usr/local/bin/jq
         WORKDIR /n3-contracts
     depends_on:
       - neon3-node
@@ -134,7 +136,7 @@ services:
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \
-      && sh /tools/wait/wait-for --timeout=0 neon3-node:40332 -- sleep 5 \
+      && bash /tools/deploy/wait-for-neon3-funding.sh \
       && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect"
     ]
 

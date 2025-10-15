@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Load utility functions from container full path
+source "/tools/utils/neo-utils.sh"
+
 # NEO N3 Funding Script
 # This script opens a wallet, checks GAS balance, sends GAS to an address, 
 # and waits for the transaction to be confirmed
@@ -19,6 +22,12 @@ check_gas_token_hash() {
         echo "GAS_TOKEN_HASH environment variable not found, using default value"
         GAS_TOKEN_HASH="0xd2a4cff31913016155e38e474a2c06d08be276cf"
         echo "Using default GAS token hash: $GAS_TOKEN_HASH"
+    else
+        # Validate user-provided token hash format
+        if ! validate_hex40_format "$GAS_TOKEN_HASH"; then
+            echo "Error: GAS_TOKEN_HASH format is invalid: $GAS_TOKEN_HASH"
+            exit 1
+        fi
     fi
 }
 
@@ -162,13 +171,6 @@ fund_all_wallets() {
     echo "All wallet addresses funded."
 }
 
-wait_for_neo_node() {
-    while ! curl -s "$NEON3_RPC_URL" > /dev/null; do
-        echo "Waiting for NEO node RPC at $NEON3_RPC_URL..."
-        sleep 2
-    done
-}
-
 set -e  # Exit on any error
 
 # Call sanity check functions
@@ -179,7 +181,7 @@ check_required_params "$@"
 ADDRESS_TO_FUND="$1"
 AMOUNT_TO_FUND="$2"
 
-wait_for_neo_node
+wait_for_node "$NEON3_RPC_URL"
 
 # Main logic
 open_wallet

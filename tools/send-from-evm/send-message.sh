@@ -160,6 +160,16 @@ export MESSAGE_DATA
 export STORE_RESULT
 export BRIDGE_OWNER_PASSWORD=""
 
+# Set personal wallet filename with default to owner wallet
+if [[ -z "$PERSONAL_WALLET_FILENAME" ]]; then
+    PERSONAL_WALLET_FILENAME="deployer"
+fi
+export PERSONAL_WALLET_FILENAME
+
+# Configure hardhat vars with the personal wallet filename
+print_info "Setting hardhat personal wallet filename to: $PERSONAL_WALLET_FILENAME"
+npx hardhat vars set PERSONAL_WALLET_FILENAME "$PERSONAL_WALLET_FILENAME"
+
 # Set default RPC URL if not provided externally
 if [[ -z "$NEOX_DEVNET_RPC_URL" ]]; then
     NEOX_DEVNET_RPC_URL="http://neox-node:8562"

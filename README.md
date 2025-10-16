@@ -101,7 +101,7 @@ docker compose run --rm deploy-message-bridge
 ## Additional Tools
 
 ### Sending Messages
-To send messages from NeoX to NeoN3, you can use the `tools/send-message` service. It uses the owner wallet in the `tools/neox-wallets` folder to send messages.
+To send messages from NeoX to NeoN3, you can use the `tools/send-message` service. It uses the `deployer` wallet in the `tools/neox-wallets` folder to send messages by default, but it can be overwritten with the env variable `PERSONAL_WALLET_FILENAME` to another wallet name in that folder (e.g. `owner`).
 
 **1. Sending a string message:**
 
@@ -139,11 +139,7 @@ NEOX_DEVNET_RPC_URL="http://devnet.neo.axlabs.net:8562" ./tools/send-messages/se
 Examples:
 - Sending an executable message and not storing the result:
 ```bash
-./tools/send-messages/send-n3-script.sh "00c56b6c766b00527ac46c766b51527ac4626c766b00c3616c756c6c6572" executable false neoxDevnet
-```
-- Sending a store-only hex message:
-```bash
-./tools/send-messages/send-n3-script.sh "00c56b6c766b00527ac46c766b51527ac4626c766b00c3616c756c6c6572" store-only
+./tools/send-messages/send-n3-script.sh "00c56b6c766b00527ac46c766b51527ac4626c766b00c3616c756c6c6572" false neoxDevnet
 ```
 - Sending an executable message and storing the result (default):
 ```bash

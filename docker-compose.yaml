@@ -110,10 +110,10 @@ services:
     build:
       context: ./
       dockerfile_inline: |
-        FROM openjdk:8u342-jdk-buster
+        FROM eclipse-temurin:8-jdk-jammy
         RUN apt-get update \
           && apt-get install -y netcat coreutils curl expect vim-common jq \
-          && rm -rf /var/lib/apt/lists/* \
+          && rm -rf /var/lib/apt/lists/*
         WORKDIR /n3-contracts
     depends_on:
       - neon3-node

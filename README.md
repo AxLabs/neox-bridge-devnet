@@ -2,6 +2,23 @@
 
 A development environment for cross-chain bridge development between NeoX and NeoN3 blockchains.
 
+## Table of Contents
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Clone the repository (with submodules)](#clone-the-repository-with-submodules)
+- [Quick Start](#quick-start)
+- [Funding Accounts](#funding-accounts)
+  - [NeoX](#neox)
+  - [NeoN3](#neon3)
+- [Check Node Availability](#check-node-availability)
+- [Deployment of EVM Message Bridge Contracts](#deployment-of-evm-message-bridge-contracts)
+    - [Initial Setup](#initial-setup)
+    - [Changing Contracts And Deploying Again](#changing-contracts-and-deploying-again)
+- [Additional Tools](#additional-tools)
+  - [Sending a String Message](#1-sending-a-string-message)
+  - [Sending an N3 Scripthash Message](#2-sending-an-n3-scripthash-message)
+  - [Sending a Custom Message](#3-sending-a-custom-message)
+
 ## Overview
 
 This project provides a complete development stack with:
@@ -42,6 +59,7 @@ This project provides a complete development stack with:
    - NeoX RPC: http://localhost:8562
    - NeoN3 RPC: http://localhost:40332
    - RabbitMQ Management UI: http://localhost:15672 (admin/admin123)
+   - RabbitMQ AMQP URL: amqp://admin:admin123@localhost:5672/
 
 4. **Stop all services:**
     ```bash
@@ -61,7 +79,7 @@ Optionally, you can invoke again the funding script manually if needed:
    ```bash
     docker compose up -d neox-funding
    ```
-Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts.
+Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts only if they have less balance than the `GAS_AMOUNT` env variable.
 
 ### NeoN3:
 To fund accounts on NeoN3, you can use the `FUNDED_ADDRESS` and `GAS_AMOUNT` env variables of the `neon3-funding` service. The funding will be processed automatically after the NeoN3 node starts, and it will also fund all the wallets in the `/tools/neon3-funding/neon3-wallets` dir.
@@ -72,7 +90,7 @@ Optionally, you can invoke again the funding script manually if needed:
    ```
 Note that running the funding service multiple times will fund all the wallets in the `neon3-wallets` dir only if they have less balance than the `GAS_AMOUNT` env variable.
 
-## Check node availability
+## Check Node Availability
 
 To verify that the nodes are up and responding via RPC:
 
@@ -86,24 +104,56 @@ To verify that the nodes are up and responding via RPC:
    curl -s -X POST --json '{"jsonrpc" : "2.0", "id": 1, "method": "getblockcount", "params":[] }' http://localhost:40332
    ```
 
-## Deployment of EVM message bridge contracts
+## Deployment of EVM Message Bridge Contracts
 
-The EVM contracts are deployed automatically when the `deploy-message-bridge` service starts. It uses the wallets in the
-`tools/neox-wallets` folder to deploy the contracts. The deployment logs can be found in the `deploy-message-bridge`
-service logs.
+### Initial Setup
 
-The service can be run manually if needed:
+#### NeoX EVM Contracts Deployment
+
+The EVM contracts are deployed automatically when the `neox-contracts` service starts. It uses the wallets in the `tools/neox-funding/neox-wallets` folder to deploy the contracts. The deployment logs can be found in the `neox-contracts` service logs.
+
+The service can also be run manually if it did not start automatically. This service depends on the NeoX node being operational and the deployer wallet having sufficient funds:
 
 ```bash
-docker compose run --rm deploy-message-bridge
+docker compose up -d neox-contracts
 ```
+
+#### NeoN3 Contracts Deployment
+
+The NeoN3 contracts are deployed automatically when the `neon3-contracts` service starts. It uses the wallets in the `tools/neon3-funding/neon3-wallets` folder to deploy the contracts. The deployment logs can be found in the `neon3-contracts` service logs.
+
+The service can also be run manually if it did not start automatically. This service depends on the NeoN3 node being operational and the deployer wallet having sufficient funds:
+
+```bash
+docker compose up -d neon3-contracts
+```
+
+### Changing Contracts And Deploying Again
+If you make changes to the contracts and want to deploy them again, you can follow these steps:
+1. **Stop all the services:**
+   ```bash
+   docker compose down -v
+   ```
+2. **Checkout the desired branch or make changes to the contracts repos.**
+3. **Update the service definitions and commands** 
+
+   Make sure that the correct deployment script is invoked by the `neox-contracts` and `neon3-contracts` services. Ensure that all expected environment variables are correctly set and any required volumes are correctly mounted.
+
+   The scripts used for deployment are located as follows:q
+     - NeoX: [tools/deploy/deploy-neox-message-bridge-contracts.sh](tools/deploy/deploy-neox-message-bridge-contracts.sh) 
+     - NeoN3: [tools/deploy/deploy-n3-message-bridge-contracts.expect](tools/deploy/deploy-n3-message-bridge-contracts.expect)
+
+4. **Start the services again:**
+   ```bash
+   docker compose up -d
+   ```
 
 ## Additional Tools
 
 ### Sending Messages
 To send messages from NeoX to NeoN3, you can use the `tools/send-message` service. It uses the `deployer` wallet in the `tools/neox-wallets` folder to send messages by default, but it can be overwritten with the env variable `PERSONAL_WALLET_FILENAME` to another wallet name in that folder (e.g. `owner`).
 
-**1. Sending a string message:**
+#### 1. Sending a String Message
 
 ```bash
 ./tools/send-messages/send-string.sh <message> [network]
@@ -126,7 +176,7 @@ NEOX_DEVNET_RPC_URL="http://devnet.neo.axlabs.net:8562" ./tools/send-messages/se
 ```
 
 
-**2. Sending an N3 scripthash message:**
+#### 2. Sending an N3 Scripthash Message
 
 ```bash
 ./tools/send-messages/send-n3-script.sh <script_hex> [type] [store_result] [network]
@@ -147,7 +197,7 @@ Examples:
 ```
 
 
-**3. Sending a custom message:**
+#### 3. Sending a Custom Message
 
 ```bash
  ./tools/send-messages/send-message.sh [OPTIONS]

@@ -49,7 +49,7 @@ services:
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
       - DEPLOYER_WALLET_JSON=/app/wallets/deployer.json
-    command: ["bash", "/tools/deploy/deploy-message-bridge-with-extraction.sh"]
+    command: ["bash", "/tools/deploy/deploy-neox-message-bridge-contracts.sh"]
     init: true
     restart: "no"
 

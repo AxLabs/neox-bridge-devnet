@@ -151,7 +151,13 @@ If you make changes to the contracts and want to deploy them again, you can foll
 ## Additional Tools
 
 ### Sending Messages
-To send messages from NeoX to NeoN3, you can use the `tools/send-message` service. It uses the `deployer` wallet in the `tools/neox-wallets` folder to send messages by default, but it can be overwritten with the env variable `PERSONAL_WALLET_FILENAME` to another wallet name in that folder (e.g. `owner`).
+To send messages from NeoX to NeoN3, you can use the `tools/send-message` service.
+It uses the `deployer` wallet to send messages by default, but it can be overwritten with the env variable `PERSONAL_WALLET_FILENAME` to another wallet name (e.g. `owner`).
+
+Note that the wallet must exist in the `bridge-evm-contracts/wallets` folder. If the `wallets` folder does not exist, the script will copy the `tools/neox-funding/neox-wallets` folder to `bridge-evm-contracts/wallets` on the first run.
+
+If there are insufficient funds in the wallet, the script will fail, so make sure to fund that wallet beforehand. See [Funding Accounts](#funding-accounts) for how to do that.
+
 
 #### 1. Sending a String Message
 

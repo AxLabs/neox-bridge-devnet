@@ -166,6 +166,14 @@ if [[ -z "$PERSONAL_WALLET_FILENAME" ]]; then
 fi
 export PERSONAL_WALLET_FILENAME
 
+# ensure `wallets` folder exists in the contracts root. if not, copy from tools/neox-funding/neox-wallets
+WALLETS_DIR="$CONTRACTS_ROOT/wallets"
+if [[ ! -d "$WALLETS_DIR" ]]; then
+    print_warning "Wallets directory not found in contracts root. Copying from tools/neox-funding/neox-wallets..."
+    mkdir -p "$WALLETS_DIR"
+    cp -r "$SCRIPT_DIR/../neox-funding/neox-wallets/"* "$WALLETS_DIR/"
+fi
+
 # Configure hardhat vars with the personal wallet filename
 print_info "Setting hardhat personal wallet filename to: $PERSONAL_WALLET_FILENAME"
 npx hardhat vars set PERSONAL_WALLET_FILENAME "$PERSONAL_WALLET_FILENAME"

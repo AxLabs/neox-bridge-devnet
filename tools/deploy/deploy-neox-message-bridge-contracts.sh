@@ -69,6 +69,16 @@ npx hardhat run scripts/deployAll.ts --network neoxDevnet | tee "$LOG_FILE"
 # Extract addresses after successful deployment
 extract_addresses
 
+# Unpause the MessageBridge to make it ready for messages
+echo "Unpausing MessageBridge..."
+if [ -n "$MESSAGE_BRIDGE_PROXY" ]; then
+    echo "Unpausing MessageBridge at address: $MESSAGE_BRIDGE_PROXY"
+    NEOX_DEVNET_RPC_URL="$NEOX_RPC_URL" MESSAGE_BRIDGE_ADDRESS="$MESSAGE_BRIDGE_PROXY" npx hardhat run scripts/messages/unpauseMessageBridge.ts --network neoxDevnet
+    echo "MessageBridge unpaused successfully!"
+else
+    echo "Warning: Could not extract MessageBridge address for unpausing"
+fi
+
 echo "Deployment and address extraction completed successfully!"
 
 # Keep the container running briefly to ensure everything is captured

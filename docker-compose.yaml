@@ -49,7 +49,7 @@ services:
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
       - DEPLOYER_WALLET_JSON=/app/wallets/deployer.json
-    command: ["bash", "/tools/deploy/deploy-message-bridge-with-extraction.sh"]
+    command: ["bash", "/tools/deploy/deploy-neox-message-bridge-contracts.sh"]
     init: true
     restart: "no"
 
@@ -77,7 +77,7 @@ services:
     init: true
     entrypoint: [
       "sh", "-c",
-      "screen -dmS neo-node dotnet neo-cli.dll && sleep 5 && tail -f ./Logs/ConsensusService/*"
+      "screen -dmS neo-node dotnet neo-cli.dll && sleep 15 && tail -f ./Logs/ConsensusService/*"
     ]
 
   neon3-funding:
@@ -110,13 +110,10 @@ services:
     build:
       context: ./
       dockerfile_inline: |
-        FROM openjdk:8-jdk
+        FROM eclipse-temurin:8-jdk-jammy
         RUN apt-get update \
-          && apt-get install -y netcat coreutils curl expect vim-common \
-          && rm -rf /var/lib/apt/lists/* \
-          && wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 \
-          && mv jq-linux64 /usr/local/bin/jq \
-          && chmod +x /usr/local/bin/jq
+          && apt-get install -y netcat coreutils curl expect vim-common jq \
+          && rm -rf /var/lib/apt/lists/*
         WORKDIR /n3-contracts
     depends_on:
       - neon3-node

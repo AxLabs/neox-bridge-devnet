@@ -137,7 +137,8 @@ services:
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \
       && bash /tools/deploy/wait-for-neon3-funding.sh \
-      && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect"
+      && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect \
+      && bash /tools/unpause/neo-unpause-all.sh"
     ]
 
   #  RabbitMQ Management UI: http://localhost:15672 (login: admin/admin123)

@@ -128,8 +128,11 @@ services:
       - NEON3_DEPLOYER_PASSWORD=
       - NEON3_OWNER_WALLET=/n3-wallets/owner.json
       - NEON3_OWNER_PASSWORD=
+      - NEON3_RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
       - NEON3_NR_VALIDATORS=2
       - NEON3_VALIDATOR_THRESHOLD=2
+      - NEON3_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - NEON3_SECURITYGUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \

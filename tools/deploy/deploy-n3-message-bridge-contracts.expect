@@ -4,7 +4,7 @@
 set timeout -1
 
 # Spawn the command that outputs the contract hashes
-spawn sh gradlew -q -PmainClass=network.bane.scripts.DeployAll run
+spawn sh gradlew -q -PmainClass=network.bane.scripts.deploy.DeployAll run
 
 # Wait for the management contract hash to appear and capture it
 expect -re {BridgeManagement contract hash: ([0-9a-f]+)} {

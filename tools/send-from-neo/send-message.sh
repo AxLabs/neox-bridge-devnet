@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Script to send messages from Neo N3 to EVM using the MessageBridge contract
@@ -6,33 +5,12 @@
 
 set -e
 
-# Default values
+# Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../utils/colors.sh"
+
+# Default values
 NEO_CONTRACTS_ROOT="$(cd "$SCRIPT_DIR/../../bridge-neo-contracts" && pwd)"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
 
 # Function to show usage
 show_usage() {
@@ -46,6 +24,8 @@ OPTIONS:
     -t, --type TYPE                Message type: executable or store-only (default: store-only)
     -d, --data DATA                Raw hex message data, string message, or EVM contract call data
     -f, --fee-sponsor HASH160      Fee sponsor hash160 (optional, uses sender if not set)
+    -s, --store-result BOOL        Store result for executable messages (default: true)
+    -n, --node URL                 Neo N3 RPC endpoint (default: http://127.0.0.1:40332)
     -h, --help                     Show this help message
 
 EXAMPLES:
@@ -56,17 +36,21 @@ EXAMPLES:
 2. Send hex-encoded EVM contract call data (store-only):
    $0 -t store-only -d 0x48656c6c6f
 
-3. Execute an EVM contract call:
+3. Execute an EVM contract call and store result:
    $0 -t executable -d 0x1234abcd
 
-4. Send with custom fee sponsor:
+4. Execute an EVM contract call without storing result:
+   $0 -t executable -d 0x1234abcd -s false
+
+5. Send with custom fee sponsor:
    $0 -t executable -d 0x5678efgh -f NbnjKGMBJzJ6j5PHeYhjJDaQ5Vy5UYu4Fv
 
-ENVIRONMENT VARIABLES:
-    NEON3_DEVNET_RPC_URL          Neo N3 RPC endpoint (default: from deploy.env)
-    WALLET                        User wallet JSON file (default: wallets/deployer.json)
-    WALLET_PASSWORD               Wallet password for the deployer account
+6. Specify custom node:
+   $0 -n http://custom-node:40332 -t store-only -d "Hello EVM World"
 
+ENVIRONMENT VARIABLES:
+    SENDER_WALLET                        User wallet JSON file (default: wallets/deployer.json)
+    SENDER_WALLET_PASSWORD               Wallet password for the deployer account
 EOF
 }
 
@@ -87,6 +71,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         -f|--fee-sponsor)
             FEE_SPONSOR="$2"
+            shift 2
+            ;;
+        -s|--store-result)
+            MESSAGE_STORE_RESULT="$2"
+            shift 2
+            ;;
+        -n|--node)
+            NODE_URL="$2"
             shift 2
             ;;
         -h|--help)
@@ -145,11 +137,15 @@ else
     MESSAGE_DATA_HEX="$MESSAGE_DATA"
 fi
 
-# Check NEON3_DEVNET_RPC_URL environment variable
-if [[ -z "$NEON3_DEVNET_RPC_URL" ]]; then
-    # default to localhost if not set
-    NEON3_DEVNET_RPC_URL="http://127.0.0.1:40332"
-    print_warning "NEON3_DEVNET_RPC_URL not set. Defaulting to $NEON3_DEVNET_RPC_URL"
+# Set default for MESSAGE_STORE_RESULT
+if [[ -z "$MESSAGE_STORE_RESULT" ]]; then
+    MESSAGE_STORE_RESULT="true"
+fi
+
+# Set NODE_URL default if not provided
+if [[ -z "$NODE_URL" ]]; then
+    NODE_URL="http://127.0.0.1:40332"
+    print_warning "Node URL not set. Defaulting to $NODE_URL"
 fi
 
 # Change to neo contracts directory
@@ -163,19 +159,21 @@ echo "  - Message Data (hex): $MESSAGE_DATA_HEX"
 if [[ -n "$FEE_SPONSOR" ]]; then
     echo "  - Fee Sponsor: $FEE_SPONSOR"
 fi
-echo "  - Node: ${NEON3_DEVNET_RPC_URL}"
+echo "  - Store Result: $MESSAGE_STORE_RESULT"
+echo "  - Node: ${NODE_URL}"
 echo ""
 
 # Set environment variables for the Java class
-export NEON3_JSON_RPC=${NEON3_DEVNET_RPC_URL}
+export NEON3_JSON_RPC=${NODE_URL}
 export MESSAGE_BRIDGE_HASH
 export MESSAGE_TYPE
 export MESSAGE_DATA="$MESSAGE_DATA_HEX"
 if [[ -n "$FEE_SPONSOR" ]]; then
     export FEE_SPONSOR
 fi
-export NEON3_DEPLOYER_WALLET=${WALLET:-"wallets/deployer.json"}
-export NEON3_DEPLOYER_PASSWORD=${WALLET_PASSWORD:-""}
+export MESSAGE_STORE_RESULT
+export NEON3_DEPLOYER_WALLET=${SENDER_WALLET:-"wallets/deployer.json"}
+export NEON3_DEPLOYER_PASSWORD=${SENDER_WALLET_PASSWORD:-""}
 export NEON3_OWNER_WALLET="wallets/owner.json"
 export NEON3_OWNER_PASSWORD=""
 

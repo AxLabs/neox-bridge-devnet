@@ -175,8 +175,21 @@ if [[ ! -d "$WALLETS_DIR" ]]; then
 fi
 
 # Configure hardhat vars with the personal wallet filename
+existing_wallet_filename=$(npx hardhat vars get PERSONAL_WALLET_FILENAME || echo "")
+if [[ -n "$existing_wallet_filename" && "$existing_wallet_filename" != "$PERSONAL_WALLET_FILENAME" ]]; then
+    print_warning "Overriding existing hardhat PERSONAL_WALLET_FILENAME. Will restore on exit!"
+fi
 print_info "Setting hardhat personal wallet filename to: $PERSONAL_WALLET_FILENAME"
 npx hardhat vars set PERSONAL_WALLET_FILENAME "$PERSONAL_WALLET_FILENAME"
+# Reset hardhat var PERSONAL_WALLET_FILENAME to previous value or delete if previously unset
+print_info "Restoring previous PERSONAL_WALLET_FILENAME on exit!"
+trap '
+  if [[ -n "$existing_wallet_filename" ]];
+    then npx hardhat vars set PERSONAL_WALLET_FILENAME "$existing_wallet_filename";
+    else npx hardhat vars delete PERSONAL_WALLET_FILENAME;
+ fi
+' EXIT
+
 
 # Set default RPC URL if not provided externally
 if [[ -z "$NEOX_DEVNET_RPC_URL" ]]; then

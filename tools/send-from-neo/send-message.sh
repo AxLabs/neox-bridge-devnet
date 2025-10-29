@@ -8,6 +8,7 @@ set -e
 # Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/colors.sh"
+source "$SCRIPT_DIR/../utils/neo-utils.sh"
 
 # Default values
 NEO_CONTRACTS_ROOT="$(cd "$SCRIPT_DIR/../../bridge-neo-contracts" && pwd)"
@@ -179,11 +180,22 @@ export NEON3_OWNER_PASSWORD=""
 
 # ensure `wallets` folder exists in the contracts root. if not, copy from tools/neox-funding/neox-wallets
 WALLETS_DIR="$NEO_CONTRACTS_ROOT/wallets"
-if [[ ! -d "$WALLETS_DIR" ]]; then
-    print_warning "Wallets directory not found in contracts root. Copying from tools/neox-funding/neox-wallets..."
-    mkdir -p "$WALLETS_DIR"
-    cp -r "$SCRIPT_DIR/../neon3-funding/neon3-wallets/"* "$WALLETS_DIR/"
+SOURCE_WALLETS_DIR="$SCRIPT_DIR/../neon3-funding/neon3-wallets"
+
+# Determine required wallets, avoid duplicates if SENDER_WALLET is owner.json
+if [[ "${SENDER_WALLET:-deployer.json}" == "owner.json" ]]; then
+    REQUIRED_WALLETS=("owner.json")
+else
+    REQUIRED_WALLETS=("${SENDER_WALLET:-deployer.json}" "owner.json")
 fi
+
+for WALLET_FILE in "${REQUIRED_WALLETS[@]}"; do
+    if ! ensure_wallet_exists "$SOURCE_WALLETS_DIR" "$WALLETS_DIR" "$WALLET_FILE"; then
+        print_error "Wallet setup failed for $WALLET_FILE. Aborting."
+        popd > /dev/null
+        exit 1
+    fi
+done
 
 # Run the gradle command
 print_info "Executing Gradle command..."

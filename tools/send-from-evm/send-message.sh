@@ -8,6 +8,7 @@ set -e
 # Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/colors.sh"
+source "$SCRIPT_DIR/../utils/neo-utils.sh"
 
 # Default values
 CONTRACTS_ROOT="$(cd "$SCRIPT_DIR/../../bridge-evm-contracts" && pwd)"
@@ -147,10 +148,11 @@ export PERSONAL_WALLET_FILENAME
 
 # ensure `wallets` folder exists in the contracts root. if not, copy from tools/neox-funding/neox-wallets
 WALLETS_DIR="$CONTRACTS_ROOT/wallets"
-if [[ ! -d "$WALLETS_DIR" ]]; then
-    print_warning "Wallets directory not found in contracts root. Copying from tools/neox-funding/neox-wallets..."
-    mkdir -p "$WALLETS_DIR"
-    cp -r "$SCRIPT_DIR/../neox-funding/neox-wallets/"* "$WALLETS_DIR/"
+SOURCE_WALLETS_DIR="$SCRIPT_DIR/../neox-funding/neox-wallets"
+REQUIRED_WALLET="${PERSONAL_WALLET_FILENAME:-deployer}.json"
+if ! ensure_wallet_exists "$SOURCE_WALLETS_DIR" "$WALLETS_DIR" "$REQUIRED_WALLET"; then
+    print_error "Wallet setup failed for $REQUIRED_WALLET. Aborting."
+    exit 1
 fi
 
 # Configure hardhat vars with the personal wallet filename

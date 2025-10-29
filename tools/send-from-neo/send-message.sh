@@ -173,7 +173,7 @@ if [[ -n "$FEE_SPONSOR" ]]; then
     export FEE_SPONSOR
 fi
 export MESSAGE_STORE_RESULT
-export NEON3_DEPLOYER_WALLET=${SENDER_WALLET:-"wallets/deployer.json"}
+export NEON3_DEPLOYER_WALLET="wallets/${SENDER_WALLET:-deployer}.json"
 export NEON3_DEPLOYER_PASSWORD=${SENDER_WALLET_PASSWORD:-""}
 export NEON3_OWNER_WALLET="wallets/owner.json"
 export NEON3_OWNER_PASSWORD=""
@@ -183,10 +183,10 @@ WALLETS_DIR="$NEO_CONTRACTS_ROOT/wallets"
 SOURCE_WALLETS_DIR="$SCRIPT_DIR/../neon3-funding/neon3-wallets"
 
 # Determine required wallets, avoid duplicates if SENDER_WALLET is owner.json
-if [[ "${SENDER_WALLET:-deployer.json}" == "owner.json" ]]; then
+if [[ "${SENDER_WALLET:-deployer}.json" == "owner.json" ]]; then
     REQUIRED_WALLETS=("owner.json")
 else
-    REQUIRED_WALLETS=("${SENDER_WALLET:-deployer.json}" "owner.json")
+    REQUIRED_WALLETS=("${SENDER_WALLET:-deployer}.json" "owner.json")
 fi
 
 for WALLET_FILE in "${REQUIRED_WALLETS[@]}"; do

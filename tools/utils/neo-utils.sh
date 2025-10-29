@@ -36,7 +36,8 @@ get_neo3_balance() {
 
     # Check if the response has a valid result and balance array
     if echo "$response" | jq -e '.result.balance' >/dev/null 2>&1; then
-        local balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
+        local balance
+        balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
     else
         local balance="0"
     fi
@@ -238,14 +239,14 @@ ensure_wallet_exists() {
 
     mkdir -p "$dest_dir"
     if [[ -f "$dest_wallet" ]]; then
-        echo "[INFO] Wallet already exists: $dest_wallet. Skipping copy."
+        print_info "Wallet already exists: $dest_wallet. Skipping copy."
         return 0
     fi
     if [[ ! -f "$src_wallet" ]]; then
-        echo "[ERROR] Required wallet not found in source: $src_wallet. Cannot continue."
+        print_error "Required wallet not found in source: $src_wallet. Cannot continue."
         return 1
     fi
     cp "$src_wallet" "$dest_wallet"
-    echo "[INFO] Copied wallet from $src_wallet to $dest_wallet."
+    print_info "Copied wallet from $src_wallet to $dest_wallet."
     return 0
 }

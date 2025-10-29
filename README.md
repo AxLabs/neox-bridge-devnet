@@ -222,7 +222,7 @@ If the wallet has insufficient funds, the script will fail. Fund the wallet befo
 - `[node_url]`: NeoN3 RPC endpoint URL (optional, default: http://127.0.0.1:40332).
 
 **Environment Variables:**
-- `SENDER_WALLET`: User wallet JSON file (default: wallets/deployer.json)
+- `SENDER_WALLET`: User wallet JSON file (default: `deployer` it refers to `wallets/deployer.json`)
 - `SENDER_WALLET_PASSWORD`: Wallet password
 
 #### 2. Sending an EVM Contract Call
@@ -252,8 +252,7 @@ If the wallet has insufficient funds, the script will fail. Fund the wallet befo
 - `-h, --help`: Show help
 
 **Environment Variables:**
-- `SENDER_WALLET`: User wallet JSON file (default: wallets/deployer.json)
-- `SENDER_WALLET_PASSWORD`: Wallet password
+- Same as above.
 
 **Notes:**
 - MessageBridge hash is auto-loaded if not provided.

@@ -37,13 +37,12 @@ function getKeystorePassword() {
 /**
  * Load private key from keystore file
  */
-async function loadPrivateKeyFromKeystore() {
-  const keystorePassword = getKeystorePassword();
-  console.log(`Loading keystore from: ${KEYSTORE_PATH}`);
+function loadWalletFromKeystore(path = KEYSTORE_PATH, password = getKeystorePassword()) {
+  const keystorePassword = password;
+  console.log(`Loading keystore from: ${path}`);
   try {
-    const keystoreJson = fs.readFileSync(KEYSTORE_PATH, 'utf8');
-    const wallet = await ethers.Wallet.fromEncryptedJson(keystoreJson, keystorePassword);
-    return wallet.privateKey;
+    const keystoreJson = fs.readFileSync(path, 'utf8');
+    return ethers.Wallet.fromEncryptedJsonSync(keystoreJson, keystorePassword);
   } catch (error) {
     console.error("Error loading keystore:", error);
     throw error;
@@ -245,15 +244,14 @@ async function main() {
 
   // Load private key and create wallet
   console.log("\nLoading sender account...");
-  let privateKey;
+  let wallet;
   try {
-    privateKey = await loadPrivateKeyFromKeystore();
+    wallet = loadWalletFromKeystore().connect(provider);
   } catch (error) {
     console.error("Failed to load private key from keystore:", error);
     process.exit(1);
   }
 
-  const wallet = new ethers.Wallet(privateKey, provider);
   console.log(`   Sender address: ${wallet.address}`);
 
   // Verify it's the expected address
@@ -404,6 +402,40 @@ async function main() {
   // Final balance check
   const finalBalance = await provider.getBalance(wallet.address);
   console.log(`\nFinal sender balance: ${ethers.formatEther(finalBalance)} ETH`);
+
+  // Send a small transaction from the neox-wallets/relayer.json wallet to itself to increase the nonce
+  console.log("\nSending small transaction from relayer wallet to itself to increase nonce...");
+  const relayerWalletPath = path.join(NEOX_WALLETS_DIR, "relayer.json");
+  let relayerWallet;
+  try {
+    const relayerJson = fs.readFileSync(relayerWalletPath, 'utf8');
+    const relayerData = JSON.parse(relayerJson);
+    if (!relayerData.address) {
+      throw new Error("Relayer wallet JSON does not contain an address field");
+    }
+    relayerWallet = loadWalletFromKeystore(relayerWalletPath, "").connect(provider); // Empty password
+  } catch (error) {
+    console.error("Failed to load relayer wallet:", error.message);
+    process.exit(1);
+  }
+  try {
+    const smallTx = await relayerWallet.sendTransaction({
+      to: relayerWallet.address,
+      value: ethers.parseEther("0.0001"),
+      gasLimit: GAS_LIMIT,
+      maxFeePerGas: ethers.parseUnits(MAX_FEE_PER_GAS_GWEI.toString(), "gwei"),
+      maxPriorityFeePerGas: ethers.parseUnits(MAX_PRIORITY_FEE_PER_GAS_GWEI.toString(), "gwei"),
+      type: 2
+    });
+    console.log(`   Relayer transaction hash: ${smallTx.hash}`);
+    await provider.waitForTransaction(smallTx.hash, 1, 60000);
+    const relayerNonce = await provider.getTransactionCount(relayerWallet.address);
+    console.log(`   Relayer wallet nonce after transaction: ${relayerNonce}`);
+  } catch (error) {
+    console.error("Failed to send relayer transaction:", error.message);
+  }
+
+
 
   if (failedTransfers === 0) {
     console.log("All transfers completed successfully!");

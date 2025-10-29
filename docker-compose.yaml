@@ -133,6 +133,7 @@ services:
       - NEON3_VALIDATOR_THRESHOLD=2
       - NEON3_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
       - NEON3_SECURITYGUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - NEON3_LINKED_CHAIN_ID=2312251829
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \

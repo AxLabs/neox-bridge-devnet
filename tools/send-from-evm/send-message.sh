@@ -5,34 +5,14 @@
 
 set -e
 
-# Default values
+# Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../utils/colors.sh"
+source "$SCRIPT_DIR/../utils/neo-utils.sh"
+
+# Default values
 CONTRACTS_ROOT="$(cd "$SCRIPT_DIR/../../bridge-evm-contracts" && pwd)"
 NETWORK="neoxDevnet"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
 
 # Function to show usage
 show_usage() {
@@ -168,15 +148,29 @@ export PERSONAL_WALLET_FILENAME
 
 # ensure `wallets` folder exists in the contracts root. if not, copy from tools/neox-funding/neox-wallets
 WALLETS_DIR="$CONTRACTS_ROOT/wallets"
-if [[ ! -d "$WALLETS_DIR" ]]; then
-    print_warning "Wallets directory not found in contracts root. Copying from tools/neox-funding/neox-wallets..."
-    mkdir -p "$WALLETS_DIR"
-    cp -r "$SCRIPT_DIR/../neox-funding/neox-wallets/"* "$WALLETS_DIR/"
+SOURCE_WALLETS_DIR="$SCRIPT_DIR/../neox-funding/neox-wallets"
+REQUIRED_WALLET="${PERSONAL_WALLET_FILENAME:-deployer}.json"
+if ! ensure_wallet_exists "$SOURCE_WALLETS_DIR" "$WALLETS_DIR" "$REQUIRED_WALLET"; then
+    print_error "Wallet setup failed for $REQUIRED_WALLET. Aborting."
+    exit 1
 fi
 
 # Configure hardhat vars with the personal wallet filename
+existing_wallet_filename=$(npx hardhat vars get PERSONAL_WALLET_FILENAME || echo "")
+if [[ -n "$existing_wallet_filename" && "$existing_wallet_filename" != "$PERSONAL_WALLET_FILENAME" ]]; then
+    print_warning "Overriding existing hardhat PERSONAL_WALLET_FILENAME. Will restore on exit!"
+fi
 print_info "Setting hardhat personal wallet filename to: $PERSONAL_WALLET_FILENAME"
 npx hardhat vars set PERSONAL_WALLET_FILENAME "$PERSONAL_WALLET_FILENAME"
+# Reset hardhat var PERSONAL_WALLET_FILENAME to previous value or delete if previously unset
+print_info "Restoring previous PERSONAL_WALLET_FILENAME on exit!"
+trap '
+  if [[ -n "$existing_wallet_filename" ]];
+    then npx hardhat vars set PERSONAL_WALLET_FILENAME "$existing_wallet_filename";
+    else npx hardhat vars delete PERSONAL_WALLET_FILENAME;
+ fi
+' EXIT
+
 
 # Set default RPC URL if not provided externally
 if [[ -z "$NEOX_DEVNET_RPC_URL" ]]; then

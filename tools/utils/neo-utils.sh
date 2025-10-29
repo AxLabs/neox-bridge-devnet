@@ -36,7 +36,8 @@ get_neo3_balance() {
 
     # Check if the response has a valid result and balance array
     if echo "$response" | jq -e '.result.balance' >/dev/null 2>&1; then
-        local balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
+        local balance
+        balance=$(echo "$response" | jq -r --arg hash "$GAS_TOKEN_HASH" '.result.balance[] | select(.assethash == $hash) | .amount // "0"')
     else
         local balance="0"
     fi
@@ -225,4 +226,27 @@ output_to_json() {
     printf "\n}\n" >> "$output_file"
 
     echo "JSON file created successfully: $output_file"
+}
+
+# Ensure a wallet file exists in the destination, copy from source if needed
+# Usage: ensure_wallet_exists <source_dir> <dest_dir> <wallet_filename>
+ensure_wallet_exists() {
+    local source_dir="$1"
+    local dest_dir="$2"
+    local wallet_file="$3"
+    local src_wallet="$source_dir/$wallet_file"
+    local dest_wallet="$dest_dir/$wallet_file"
+
+    mkdir -p "$dest_dir"
+    if [[ -f "$dest_wallet" ]]; then
+        print_info "Wallet already exists: $dest_wallet. Skipping copy."
+        return 0
+    fi
+    if [[ ! -f "$src_wallet" ]]; then
+        print_error "Required wallet not found in source: $src_wallet. Cannot continue."
+        return 1
+    fi
+    cp "$src_wallet" "$dest_wallet"
+    print_info "Copied wallet from $src_wallet to $dest_wallet."
+    return 0
 }

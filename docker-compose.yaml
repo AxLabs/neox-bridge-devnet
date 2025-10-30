@@ -91,7 +91,7 @@ services:
     volumes:
       - ./tools:/tools
     environment:
-      - NEON3_RPC_URL=http://neon3-node:40332
+      - N3_JSON_RPC=http://neon3-node:40332
       - GAS_AMOUNT=10000000000
       - GAS_TOKEN_HASH=0xd2a4cff31913016155e38e474a2c06d08be276cf
       - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
@@ -123,22 +123,30 @@ services:
       - ./tools/neon3-funding/neon3-wallets:/n3-wallets:ro
     working_dir: /n3-contracts
     environment:
-      - NEON3_JSON_RPC=http://neon3-node:40332
-      - NEON3_DEPLOYER_WALLET=/n3-wallets/deployer.json
-      - NEON3_DEPLOYER_PASSWORD=
-      - NEON3_OWNER_WALLET=/n3-wallets/owner.json
-      - NEON3_OWNER_PASSWORD=
-      - NEON3_RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
-      - NEON3_NR_VALIDATORS=2
-      - NEON3_VALIDATOR_THRESHOLD=2
-      - NEON3_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
-      - NEON3_SECURITYGUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
-      - NEON3_LINKED_CHAIN_ID=2312251829
+      - N3_JSON_RPC=http://neon3-node:40332
+      - WALLET_FILEPATH_DEPLOYER=/n3-wallets/deployer.json
+      - WALLET_PASSWORD_DEPLOYER=
+      - WALLET_FILEPATH_OWNER=/n3-wallets/owner.json
+      - WALLET_PASSWORD_OWNER=
+      - WALLET_FILEPATH_GOVERNOR=/n3-wallets/governor.json
+      - WALLET_PASSWORD_GOVERNOR=
+      - MANAGEMENT_CONTRACT_NAME=BridgeManagement
+      - MANAGEMENT_VALIDATOR_THRESHOLD=2
+      - MANAGEMENT_NUMBER_OF_VALIDATORS=2
+      - ROLE_OWNER_ADDRESS=NRozNKnv4aSMEUL3KyD4UyeHoiPdLpi4y6
+      - ROLE_RELAYER_ADDRESS=NV9K66eGN9qjJGCFMo5ftJDQeWkG4AP6E1
+      - ROLE_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - ROLE_SECURITY_GUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - ROLE_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - ROLE_SECURITY_GUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
+      - BRIDGE_CONTRACT_NAME=Bridge
+      - LINKED_CHAIN_ID=2312251829
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \
       && bash /tools/deploy/wait-for-neon3-funding.sh \
       && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect \
+      && bash /tools/register/neo-set-native-bridge.sh \
       && bash /tools/unpause/neo-unpause-all.sh"
     ]
 

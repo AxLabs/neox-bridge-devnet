@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # neo-utils.sh
 
+# Utility function to run a Java main class using Gradle
+# Usage: run_gradle_class <main_class>
+run_gradle_class() {
+  local main_class="$1"
+
+  sh gradlew -q -PmainClass="$main_class" run \
+    2> >(grep -vE "SLF4J:|Note: (Some input files use unchecked|Recompile with -Xlint:unchecked)")
+}
+
 # Utility functions for NEO and Ethereum interactions
 # Usage: wait_for_node <rpc_url>
 wait_for_node() {

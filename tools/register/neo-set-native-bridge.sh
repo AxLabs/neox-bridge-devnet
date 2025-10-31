@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Load utility functions from container full path
+source "/tools/utils/neo-utils.sh"
+
 # shellcheck disable=SC2155
 export BRIDGE_HASH=$(jq -r '.bridge' /tools/addresses/n3-addresses.json)
 
@@ -14,4 +17,6 @@ export NATIVE_SET_MAX_TOTAL_DEPOSITED=10000000000000
 echo ''
 echo 'Setting native bridge in BridgeContract'
 echo "Using Bridge: $BRIDGE_HASH"
-sh gradlew -PmainClass=network.bane.scripts.token.SetNativeBridge run
+
+main_class="network.bane.scripts.token.SetNativeBridge"
+run_gradle_class "$main_class"

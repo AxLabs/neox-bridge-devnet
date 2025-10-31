@@ -14,4 +14,5 @@ export NATIVE_SET_MAX_TOTAL_DEPOSITED=10000000000000
 echo ''
 echo 'Setting native bridge in BridgeContract'
 echo "Using Bridge: $BRIDGE_HASH"
-sh gradlew -PmainClass=network.bane.scripts.token.SetNativeBridge run
+sh gradlew -q -PmainClass=network.bane.scripts.token.SetNativeBridge run \
+  2> >(grep -vE "SLF4J:|Note: (Some input files use unchecked|Recompile with -Xlint:unchecked)")

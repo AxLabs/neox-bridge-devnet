@@ -147,6 +147,7 @@ services:
       && bash /tools/deploy/wait-for-neon3-funding.sh \
       && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect \
       && bash /tools/register/neo-set-native-bridge.sh \
+      && bash /tools/register/neo-register-neo-token.sh \
       && bash /tools/unpause/neo-unpause-all.sh"
     ]
 

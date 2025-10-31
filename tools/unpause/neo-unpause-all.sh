@@ -8,8 +8,10 @@ export NEON3_GOVERNOR_WALLET=/n3-wallets/governor.json
 
 echo 'Unpausing all in BridgeContract'
 echo "Using Bridge: $BRIDGE_HASH"
-sh gradlew -PmainClass=network.bane.scripts.token.UnpauseAll run
+sh gradlew -q -PmainClass=network.bane.scripts.token.UnpauseAll run \
+  2> >(grep -vE "SLF4J:|Note: (Some input files use unchecked|Recompile with -Xlint:unchecked)")
 
 echo 'Unpausing all in MessageBridge'
 echo "Using MessageBridge: $MESSAGE_BRIDGE_HASH"
-sh gradlew -PmainClass=network.bane.scripts.message.UnpauseAll run
+sh gradlew -q -PmainClass=network.bane.scripts.message.UnpauseAll run \
+  2> >(grep -vE "SLF4J:|Note: (Some input files use unchecked|Recompile with -Xlint:unchecked)")

@@ -38,7 +38,7 @@ wait_for_json_value() {
         return 0
       fi
     else
-      echo "File not found yet: ${file}"
+      >&2 echo "File not found yet: ${file}"
     fi
 
     (( SECONDS >= deadline )) && {
@@ -63,7 +63,7 @@ echo "Using Bridge: $BRIDGE_HASH"
 export TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_N3=0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5
 EVM_ADDRESSES_FILE=/tools/addresses/neox-addresses.json
 # shellcheck disable=SC2155
-export TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM="$(wait_for_json_value  $EVM_ADDRESSES_FILE '.neoToken' 180 2)" || exit 1
+export TOKEN_REGISTRATION_TOKEN_CONTRACT_HASH_ON_EVM="$(wait_for_json_value "$EVM_ADDRESSES_FILE" '.neoToken' 180 2)" || exit 1
 export TOKEN_REGISTRATION_DEPOSIT_FEE=10000000
 export TOKEN_REGISTRATION_MIN_AMOUNT=1
 export TOKEN_REGISTRATION_MAX_AMOUNT=10000

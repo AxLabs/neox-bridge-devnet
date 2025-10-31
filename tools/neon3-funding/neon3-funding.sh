@@ -9,10 +9,10 @@ source "/tools/utils/neo-utils.sh"
 
 check_rpc_url() {
     # Set default RPC URL if not provided
-    if [ -z "$NEON3_RPC_URL" ]; then
-        echo "NEON3_RPC_URL environment variable not found, using default value"
-        NEON3_RPC_URL="http://localhost:40332"
-        echo "Using default RPC URL: $NEON3_RPC_URL"
+    if [ -z "$N3_JSON_RPC" ]; then
+        echo "N3_JSON_RPC environment variable not found, using default value"
+        N3_JSON_RPC="http://localhost:40332"
+        echo "Using default RPC URL: $N3_JSON_RPC"
     fi
 }
 
@@ -44,7 +44,7 @@ check_required_params() {
 open_wallet() {
     echo "Opening wallet..." >&2
     local response
-    response=$(curl -s -X POST "$NEON3_RPC_URL" \
+    response=$(curl -s -X POST "$N3_JSON_RPC" \
         -H "Content-Type: application/json" \
         -d '{
             "jsonrpc": "2.0",
@@ -67,7 +67,7 @@ get_gas_balance() {
     local address="$1"
     echo "Checking GAS balance for address: $address" >&2
     local response
-    response=$(curl -s -X POST "$NEON3_RPC_URL" \
+    response=$(curl -s -X POST "$N3_JSON_RPC" \
         -H "Content-Type: application/json" \
         -d "{
             \"jsonrpc\": \"2.0\",
@@ -104,7 +104,7 @@ send_gas_transaction() {
     local amount="$2"
     echo "   Sending transaction to $address..." >&2
     local response
-    response=$(curl -s -X POST "$NEON3_RPC_URL" \
+    response=$(curl -s -X POST "$N3_JSON_RPC" \
         -H "Content-Type: application/json" \
         -d "{
             \"jsonrpc\": \"2.0\",
@@ -139,7 +139,7 @@ wait_for_confirmation() {
     echo "Waiting for transaction confirmation..."
     while true; do
         local response
-        response=$(curl -s -X POST "$NEON3_RPC_URL" \
+        response=$(curl -s -X POST "$N3_JSON_RPC" \
             -H "Content-Type: application/json" \
             -d "{
                \"jsonrpc\": \"2.0\",
@@ -242,7 +242,7 @@ check_required_params "$@"
 ADDRESS_TO_FUND="$1"
 AMOUNT_TO_FUND="$2"
 
-wait_for_node "$NEON3_RPC_URL"
+wait_for_node "$N3_JSON_RPC"
 
 # Main logic
 open_wallet

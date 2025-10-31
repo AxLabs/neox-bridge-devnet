@@ -5,14 +5,14 @@
 set -e
 
 # Required parameters for NEO N3
-if [ -z "$NEON3_JSON_RPC" ]; then
-    echo "NEON3_JSON_RPC is not set. Exiting."
+if [ -z "$N3_JSON_RPC" ]; then
+    echo "N3_JSON_RPC is not set. Exiting."
     exit 1
 fi
-if [ -z "$NEON3_DEPLOYER_WALLET" ]; then
-    echo "NEON3_DEPLOYER_WALLET is not set. Exiting."
+if [ -z "$WALLET_FILEPATH_DEPLOYER" ]; then
+    echo "WALLET_FILEPATH_DEPLOYER is not set. Exiting."
     exit 1
 fi
 
 # Call the generic wait-for-funding script with arguments
-exec /tools/utils/wait-for-funding.sh "$NEON3_JSON_RPC" "$NEON3_DEPLOYER_WALLET"
+exec /tools/utils/wait-for-funding.sh "$N3_JSON_RPC" "$WALLET_FILEPATH_DEPLOYER"

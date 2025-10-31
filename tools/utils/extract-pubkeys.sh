@@ -57,8 +57,8 @@ extract_pubkey() {
 
     if [ ${#pubkey} -eq 66 ]; then
         # Export the variable directly
-        export "NEON3_${wallet_name}_PUBKEY=$pubkey"
-        echo "export NEON3_${wallet_name}_PUBKEY=$pubkey"
+        export "ROLE_${wallet_name}_PUBLIC_KEY=$pubkey"
+        echo "export ROLE_${wallet_name}_PUBLIC_KEY=$pubkey"
     else
         echo "Warning: Invalid public key extraction for $wallet_name. Script: $hex_script" >&2
     fi
@@ -70,7 +70,5 @@ echo "# Generated on $(date)" >&2
 echo "" >&2
 
 # Extract public keys from each wallet
-extract_pubkey "$WALLET_DIR/governor.json" "GOVERNOR"
-extract_pubkey "$WALLET_DIR/relayer.json" "RELAYER"
-extract_pubkey "$WALLET_DIR/validator01.json" "VALIDATOR1"
-extract_pubkey "$WALLET_DIR/validator02.json" "VALIDATOR2"
+extract_pubkey "$WALLET_DIR/validator01.json" "VALIDATOR_01"
+extract_pubkey "$WALLET_DIR/validator02.json" "VALIDATOR_02"

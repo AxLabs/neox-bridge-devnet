@@ -5,6 +5,9 @@
 
 set -e
 
+# Load utility functions from container full path
+source "/tools/utils/neo-utils.sh"
+
 # Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../utils/colors.sh"
@@ -200,7 +203,9 @@ done
 # Run the gradle command
 print_info "Executing Gradle command..."
 print_info "Using Node: $NEON3_DEVNET_RPC_URL"
-if ./gradlew run -PmainClass=network.bane.scripts.message.SendMessage; then
+
+main_class="network.bane.scripts.message.SendMessage"
+if run_gradle_class "$main_class"; then
     print_success "Message sent successfully!"
 else
     print_error "Failed to send message"

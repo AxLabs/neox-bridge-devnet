@@ -5,6 +5,9 @@
 # -o pipefail: make pipelines fail if any command fails
 set -euo pipefail
 
+# Load utility functions from container full path
+source "/tools/utils/neo-utils.sh"
+
 # wait_for_json_value <file> <jq_filter> [timeout_sec] [interval_sec]
 wait_for_json_value() {
   local file="$1"
@@ -67,5 +70,5 @@ export TOKEN_REGISTRATION_MAX_AMOUNT=10000
 export TOKEN_REGISTRATION_MAX_WITHDRAWALS=100
 export TOKEN_REGISTRATION_DECIMAL_SCALING_FACTOR=0
 
-sh gradlew -q -PmainClass=network.bane.scripts.token.RegisterToken run \
-  2> >(grep -vE "SLF4J:|Note: (Some input files use unchecked|Recompile with -Xlint:unchecked)")
+main_class="network.bane.scripts.token.RegisterToken"
+run_gradle_class "$main_class"

@@ -1,15 +1,14 @@
 {
-  "name": "bridge-devnet-tools",
+  "type": "module",
+  "name": "neox-funding",
   "version": "1.0.0",
-  "description": "Tools for bridge devnet setup",
+  "description": "NEO X funding tool for accounts and bridges",
   "main": "fund-neox-accounts.js",
   "scripts": {
-    "fund-accounts": "node fund-neox-accounts.js"
+    "start": "node fund-neox-accounts.js"
   },
   "dependencies": {
-    "ethers": "^6.13.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "ethers": "^6.15.0"
+  }
 }
 

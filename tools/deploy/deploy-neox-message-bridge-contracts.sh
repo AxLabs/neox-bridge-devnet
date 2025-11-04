@@ -66,6 +66,7 @@ print_info "Starting message bridge deployment..."
 
 # Run the deployment process
 rm -rf /app/.openzeppelin
+rm /tools/addresses/neox-addresses.json
 bash /tools/deploy/wait-for-neox-funding.sh
 npm install
 npx hardhat vars set NEOX_DEVNET_RPC_URL "$NEOX_RPC_URL"

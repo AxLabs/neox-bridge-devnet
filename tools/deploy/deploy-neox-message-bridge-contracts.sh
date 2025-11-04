@@ -98,6 +98,20 @@ print_success "Native bridge configuration completed!"
 #    print_warning "Could not extract NEO token address for token bridge configuration"
 #fi
 
+# Unpause the native bridge at all levels
+print_info "Unpausing native bridge at all levels..."
+npx hardhat run scripts/unpauseNativeBridge.ts --network neoxDevnet
+print_success "Native bridge unpaused successfully!"
+
+# Unpause the token bridge for NEO token
+print_info "Unpausing token bridge for NEO token..."
+if [ -n "$NEO_TOKEN_ADDRESS" ]; then
+    TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" npx hardhat run scripts/unpauseTokenBridge.ts --network neoxDevnet
+    print_success "NEO token bridge unpaused successfully!"
+else
+    print_warning "Could not extract NEO token address for token bridge unpausing"
+fi
+
 # Unpause the MessageBridge to make it ready for messages
 print_info "Unpausing MessageBridge..."
 if [ -n "$MESSAGE_BRIDGE_PROXY" ]; then

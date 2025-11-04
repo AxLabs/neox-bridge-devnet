@@ -78,7 +78,7 @@ extract_addresses
 npx hardhat vars set BRIDGE_ADDRESS "$BRIDGE_PROXY"
 
 # Deploy and register NEO token
-npx hardhat run scripts/deployTokenAndRegisterNeo.ts --network neoxDevnet | tee "$DEPLOY_TOKEN_LOG_FILE"
+npx hardhat run scripts/registration/deployTokenAndRegisterNeo.ts --network neoxDevnet | tee "$DEPLOY_TOKEN_LOG_FILE"
 NEO_TOKEN_ADDRESS=$(extract_contract_address_from_log "$DEPLOY_TOKEN_LOG_FILE" "Token Address:")
 
 # Write addresses to JSON file
@@ -98,25 +98,25 @@ print_success "Native bridge configuration completed!"
 #    print_warning "Could not extract NEO token address for token bridge configuration"
 #fi
 
-# Unpause the native bridge at all levels
-print_info "Unpausing native bridge at all levels..."
-npx hardhat run scripts/unpauseNativeBridge.ts --network neoxDevnet
-print_success "Native bridge unpaused successfully!"
-
-# Unpause the token bridge for NEO token
-print_info "Unpausing token bridge for NEO token..."
+# Unpause the native bridge and token bridges
+print_info "Unpausing all bridge components..."
 if [ -n "$NEO_TOKEN_ADDRESS" ]; then
-    TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" npx hardhat run scripts/unpauseTokenBridge.ts --network neoxDevnet
-    print_success "NEO token bridge unpaused successfully!"
+    TOKEN_ADDRESSES="$NEO_TOKEN_ADDRESS" \
+    npx hardhat run scripts/unpause/unpauseAllBridge.ts --network neoxDevnet
+    print_success "All bridge components unpaused successfully!"
 else
-    print_warning "Could not extract NEO token address for token bridge unpausing"
+    print_warning "Could not extract NEO token address, unpausing bridges without token addresses"
+    npx hardhat run scripts/unpause/unpauseAllBridge.ts --network neoxDevnet
+    print_success "Bridge components unpaused successfully!"
 fi
 
 # Unpause the MessageBridge to make it ready for messages
 print_info "Unpausing MessageBridge..."
 if [ -n "$MESSAGE_BRIDGE_PROXY" ]; then
     print_info "Unpausing MessageBridge at address: $MESSAGE_BRIDGE_PROXY"
-    NEOX_DEVNET_RPC_URL="$NEOX_RPC_URL" MESSAGE_BRIDGE_ADDRESS="$MESSAGE_BRIDGE_PROXY" npx hardhat run scripts/messages/unpauseMessageBridge.ts --network neoxDevnet
+    NEOX_DEVNET_RPC_URL="$NEOX_RPC_URL" \
+    MESSAGE_BRIDGE_ADDRESS="$MESSAGE_BRIDGE_PROXY"\
+    npx hardhat run scripts/unpause/unpauseMessageBridge.ts --network neoxDevnet
     print_success "MessageBridge unpaused successfully!"
 else
     print_warning "Could not extract MessageBridge address for unpausing"

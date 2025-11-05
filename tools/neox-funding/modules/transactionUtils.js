@@ -66,36 +66,6 @@ class TransactionService {
     }
   }
 
-  static async getTransactionDetails(provider, txHash) {
-    try {
-      const tx = await provider.getTransaction(txHash);
-      return {
-        to: tx.to,
-        value: ethers.formatEther(tx.value || 0),
-        gasLimit: tx.gasLimit,
-        gasPrice: ethers.formatUnits(tx.gasPrice || 0, 'gwei')
-      };
-    } catch (error) {
-      return null;
-    }
-  }
-
-  static async simulateTransaction(provider, tx, blockNumber) {
-    try {
-      await provider.call({
-        to: tx.to,
-        from: tx.from,
-        value: tx.value,
-        data: tx.data,
-        gasLimit: tx.gasLimit,
-        gasPrice: tx.gasPrice
-      }, blockNumber - 1);
-      return null;
-    } catch (error) {
-      return error.message;
-    }
-  }
-
   static async waitAndVerify(provider, txHash, toAddress = null, timeout = 60000) {
     try {
       console.log(`   Verifying transaction ${txHash}...`);
@@ -110,22 +80,7 @@ class TransactionService {
         return waitResult;
       } else {
         // Enhanced error reporting for failed transactions
-        const txDetails = await this.getTransactionDetails(provider, txHash);
-        if (txDetails) {
-          console.log(`   Failed transaction details:`);
-          console.log(`     To: ${txDetails.to}`);
-          console.log(`     Value: ${txDetails.value} ETH`);
-          console.log(`     Gas limit: ${txDetails.gasLimit}`);
-          console.log(`     Gas price: ${txDetails.gasPrice} gwei`);
-
-          if (waitResult.receipt) {
-            const revertReason = await this.simulateTransaction(provider, txDetails, waitResult.receipt.blockNumber);
-            if (revertReason) {
-              console.log(`   Revert reason: ${revertReason}`);
-            }
-          }
-        }
-
+        console.log(`Transaction failed: ${waitResult.error}`);
         return waitResult;
       }
     } catch (error) {

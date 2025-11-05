@@ -66,7 +66,7 @@ print_info "Starting message bridge deployment..."
 
 # Run the deployment process
 rm -rf /app/.openzeppelin
-rm /tools/addresses/neox-addresses.json
+rm -f /tools/addresses/neox-addresses.json
 bash /tools/deploy/wait-for-neox-funding.sh
 npm install
 npx hardhat vars set NEOX_DEVNET_RPC_URL "$NEOX_RPC_URL"
@@ -124,6 +124,14 @@ else
 fi
 
 print_success "Deployment and address extraction completed successfully!"
+
+print_info "Funding all bridges with initial ETH and tokens..."
+BRIDGE_ADDRESS="$BRIDGE_PROXY" \
+TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" \
+ETH_AMOUNT=90 \
+TOKEN_AMOUNT=10000 \
+npx hardhat run scripts/fundAllBridges.ts --network neoxDevnet
+print_success "All bridges funded successfully!"
 
 # Keep the container running briefly to ensure everything is captured
 print_info "Keeping container alive briefly to ensure all operations complete..."

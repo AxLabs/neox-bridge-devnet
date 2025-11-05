@@ -134,24 +134,27 @@ class AccountFunderService {
   }
 
   static async sendRelayerTransaction(provider) {
-    console.log("\nSending small transaction from relayer wallet to itself to increase nonce...");
+    const relayerWallet = loadNamedWallet('relayer', provider);
+    if ((await provider.getTransactionCount(relayerWallet.address)) > 0) {
+      console.log('Relayer transaction already sent, skipping...');
+    } else {
+      console.log('Sending small transaction from relayer wallet to itself to increase nonce...');
 
-    try {
-      const relayerWallet = loadNamedWallet("relayer", provider);
+      try {
+        const result = await sendAndWait(relayerWallet, {
+          to: relayerWallet.address,
+          value: ethers.parseEther('0.0001'),
+        });
 
-      const result = await sendAndWait(relayerWallet, {
-        to: relayerWallet.address,
-        value: ethers.parseEther("0.0001")
-      });
-
-      if (result.success) {
-        const relayerNonce = await provider.getTransactionCount(relayerWallet.address);
-        console.log(`   Relayer wallet nonce after transaction: ${relayerNonce}`);
-      } else {
-        console.error("Failed to send relayer transaction:", result.error);
+        if (result.success) {
+          const relayerNonce = await provider.getTransactionCount(relayerWallet.address);
+          console.log(`   Relayer wallet nonce after transaction: ${relayerNonce}`);
+        } else {
+          console.error('Failed to send relayer transaction:', result.error);
+        }
+      } catch (error) {
+        console.error('Failed to load relayer wallet:', error.message);
       }
-    } catch (error) {
-      console.error("Failed to load relayer wallet:", error.message);
     }
   }
 }

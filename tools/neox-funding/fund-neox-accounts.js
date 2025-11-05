@@ -1,19 +1,17 @@
-import { ethers } from 'ethers';
+import {ethers} from 'ethers';
 import path from 'path';
 
 // Import only the specific functions we need
 import {
-  setupProvider,
-  setupAndValidateWallet,
-  validateFundingData,
   calculateRequirements,
-  validateSufficientBalance,
   sendFundingTransactions,
+  sendRelayerTransaction,
+  setupAndValidateWallet,
+  setupProvider,
+  validateFundingData,
+  validateSufficientBalance,
   verifyTransactions,
-  sendRelayerTransaction
 } from './modules/accountFunder.js';
-
-import { waitForDeploymentAndFund } from './modules/bridgeFunder.js';
 import { readAll } from './modules/fundingDataReader.js';
 
 // Configuration
@@ -88,28 +86,11 @@ async function main() {
 
   await sendRelayerTransaction(provider);
 
-  // Bridge funding
-  console.log("\nWaiting for contract deployment to complete...");
-  const bridgeFundingSuccess = await waitForDeploymentAndFund(provider);
-
   // Final overall summary
   if (verifyResults.failedTransfers === 0) {
     console.log("All account transfers completed successfully!");
   } else {
     console.log(`${verifyResults.failedTransfers} account transfers failed`);
-  }
-
-  if (verifyResults.failedTransfers === 0 && bridgeFundingSuccess !== false) {
-    console.log("All transfers and bridge funding completed successfully!");
-    process.exit(0);
-  } else {
-    if (verifyResults.failedTransfers > 0) {
-      console.log(`${verifyResults.failedTransfers} account transfers failed`);
-    }
-    if (bridgeFundingSuccess === false) {
-      console.log("Bridge funding failed");
-    }
-    process.exit(1);
   }
 }
 
@@ -125,11 +106,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Execute the script
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error("Script failed:", error);
-    process.exit(1);
-  });
-}
-
-export { main };
+main().catch((error) => {
+  console.error('Script failed:', error);
+  process.exit(1);
+});

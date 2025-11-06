@@ -1,12 +1,9 @@
 #!/bin/bash
 
 # Script to send messages from Neo N3 to EVM using the MessageBridge contract
-# This script wraps the Java SendMessage class with convenient parameter handling
+# This script wraps the Java SendExecutableMessage and SendStoreOnlyMessage classes with convenient parameter handling
 
 set -e
-
-# Load utility functions from container full path
-source "/tools/utils/neo-utils.sh"
 
 # Source color variables and print functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -168,18 +165,24 @@ echo "  - Node: ${NODE_URL}"
 echo ""
 
 # Set environment variables for the Java class
-export NEON3_JSON_RPC=${NODE_URL}
+export N3_JSON_RPC=${NODE_URL}
 export MESSAGE_BRIDGE_HASH
-export MESSAGE_TYPE
-export MESSAGE_DATA="$MESSAGE_DATA_HEX"
+export WALLET_FILEPATH_PERSONAL="wallets/${SENDER_WALLET:-deployer}.json"
+export WALLET_PASSWORD_PERSONAL=${SENDER_WALLET_PASSWORD:-""}
+export NEON3_OWNER_WALLET="wallets/owner.json"
+export NEON3_OWNER_PASSWORD=""
+
+# Set environment variables specific to message type
+if [[ "$MESSAGE_TYPE" == "executable" ]]; then
+    export MESSAGE_SEND_EXECUTABLE_MESSAGE="$MESSAGE_DATA_HEX"
+    export MESSAGE_SEND_EXECUTABLE_STORE_BOOL="$MESSAGE_STORE_RESULT"
+else
+    export MESSAGE_SEND_STORE_ONLY_MESSAGE="$MESSAGE_DATA_HEX"
+fi
+
 if [[ -n "$FEE_SPONSOR" ]]; then
     export FEE_SPONSOR
 fi
-export MESSAGE_STORE_RESULT
-export NEON3_DEPLOYER_WALLET="wallets/${SENDER_WALLET:-deployer}.json"
-export NEON3_DEPLOYER_PASSWORD=${SENDER_WALLET_PASSWORD:-""}
-export NEON3_OWNER_WALLET="wallets/owner.json"
-export NEON3_OWNER_PASSWORD=""
 
 # ensure `wallets` folder exists in the contracts root. if not, copy from tools/neox-funding/neox-wallets
 WALLETS_DIR="$NEO_CONTRACTS_ROOT/wallets"
@@ -202,9 +205,15 @@ done
 
 # Run the gradle command
 print_info "Executing Gradle command..."
-print_info "Using Node: $NEON3_DEVNET_RPC_URL"
+print_info "Using Node: $N3_JSON_RPC"
 
-main_class="network.bane.scripts.message.SendMessage"
+# Select the appropriate Java class based on message type
+if [[ "$MESSAGE_TYPE" == "executable" ]]; then
+    main_class="network.bane.scripts.message.SendExecutableMessage"
+else
+    main_class="network.bane.scripts.message.SendStoreOnlyMessage"
+fi
+
 if run_gradle_class "$main_class"; then
     print_success "Message sent successfully!"
 else

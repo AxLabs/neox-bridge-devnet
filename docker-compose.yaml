@@ -140,7 +140,7 @@ services:
       - ROLE_GOVERNOR_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
       - ROLE_SECURITY_GUARD_ADDRESS=NNTRbhrT1qbJ2qbY1qFnwumjs6f1B3Ev54
       - BRIDGE_CONTRACT_NAME=Bridge
-      - LINKED_CHAIN_ID=2312251829
+      - LINKED_CHAIN_ID=2312051126
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \

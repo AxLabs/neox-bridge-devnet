@@ -117,7 +117,7 @@ if [ -n "$MESSAGE_BRIDGE_PROXY" ]; then
     print_info "Unpausing MessageBridge at address: $MESSAGE_BRIDGE_PROXY"
     NEOX_DEVNET_RPC_URL="$NEOX_RPC_URL" \
     MESSAGE_BRIDGE_ADDRESS="$MESSAGE_BRIDGE_PROXY"\
-    npx hardhat run scripts/unpause/unpauseMessageBridge.ts --network neoxDevnet
+    npx hardhat run scripts/messages/unpause/unpauseAll.ts --network neoxDevnet
     print_success "MessageBridge unpaused successfully!"
 else
     print_warning "Could not extract MessageBridge address for unpausing"

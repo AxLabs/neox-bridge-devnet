@@ -1,0 +1,21 @@
+{
+  "name": "typescript-examples",
+  "version": "1.0.0",
+  "description": "Examples of how to interact with the MessageBridge in TS",
+  "license": "MIT",
+  "author": "Otniel Nicola",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "tsx index.ts"
+  },
+  "dependencies": {
+    "@cityofzion/neon-js": "5.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

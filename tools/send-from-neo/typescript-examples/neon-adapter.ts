@@ -34,6 +34,9 @@ import type { ContractParamJson } from "@cityofzion/neon-core/lib/sc/ContractPar
 import type { AccountJSON, WalletJSON } from "@cityofzion/neon-core/lib/wallet";
 import type { KeyType } from "@cityofzion/neon-core/lib/wallet/Account";
 import type { ScryptParams } from "@cityofzion/neon-core/lib/wallet/nep2";
+import type { TransactionLike } from "@cityofzion/neon-core/lib/tx/transaction/Transaction";
+import type { SignerLike } from "@cityofzion/neon-core/lib/tx/components/Signer";
+import { WitnessScope } from "@cityofzion/neon-core/lib/tx/components/WitnessScope";
 
 // Normalize the neon-js exports to proper ESM structure
 // CRITICAL WORKAROUND: neon-js has complex ESM/CJS interop requirements
@@ -82,6 +85,9 @@ export type Query = InstanceType<typeof rpc.Query>;
 export type Network = InstanceType<typeof rpc.Network>;
 export type StringStream = InstanceType<typeof u.StringStream>;
 export type Transaction = InstanceType<typeof tx.Transaction>;
+export type TransactionSigner = InstanceType<typeof tx.Signer>;
+// Re-export WitnessScope enum
+export { WitnessScope };
 
 // Define a union type for contract parameter values for convenience
 type ContractParamValueType = string | number | boolean | ContractParamJson[] | null | undefined;
@@ -99,6 +105,8 @@ export interface NeonAdapter {
         query: (req: QueryLike<unknown[]>) => Query;
         network: (net: Partial<NetworkJSON>) => Network;
         stringStream: (str?: string) => StringStream;
+        transaction: (tx?: Partial<Pick<TransactionLike | Transaction, keyof TransactionLike>>) => Transaction;
+        signer: (signer?: Partial<SignerLike | TransactionSigner>) => TransactionSigner;
     };
     is: {
         address: (str: string) => boolean;
@@ -144,11 +152,9 @@ export interface NeonAdapter {
     smartContractUtils: typeof sc;
     /** @deprecated Use adapter methods instead of accessing raw modules directly */
     rpcUtils: typeof rpc;
-    /** @deprecated Use adapter methods instead of accessing raw modules directly */
     utils: typeof u;
     /** @deprecated Use adapter methods instead of accessing raw modules directly */
     transactionUtils: typeof tx;
-    /** @deprecated Use adapter methods instead of accessing raw modules directly */
     constants: typeof CONST;
 }
 
@@ -190,6 +196,13 @@ export const neonAdapter: NeonAdapter = {
         },
         stringStream: (str?: string): StringStream => {
             return Neon.create.stringStream(str);
+        },
+        transaction: (transaction?: Partial<Pick<TransactionLike | Transaction, keyof TransactionLike>>): Transaction => {
+            return new tx.Transaction(transaction);
+        },
+        signer: (signer?: Partial<SignerLike | TransactionSigner>): TransactionSigner => {
+            // Directly use the neon-js internals to create a Signer instance
+            return new tx.Signer(signer);
         }
     },
     is: {

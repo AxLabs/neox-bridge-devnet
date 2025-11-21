@@ -80,4 +80,3 @@ export interface MessageBridgeConfig {
 
 // Re-export Account type for convenience
 export type { Account };
-

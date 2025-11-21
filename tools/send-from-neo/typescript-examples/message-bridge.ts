@@ -12,20 +12,6 @@ import {
     type TransactionResult
 } from "./types.js";
 
-/**
- * @fileoverview Message Bridge Contract Wrapper
- *
- * Ethers.js-style contract wrapper for the Neo3 Message Bridge contract.
- * Initialize with connection details and account, then call contract methods directly.
- */
-
-
-/**
- * Message Bridge Contract Wrapper
- *
- * Provides an ethers.js-style interface for interacting with the Neo3 Message Bridge contract.
- * Initialize once with connection details, then call contract methods directly.
- */
 export class MessageBridge {
     private config: MessageBridgeConfig;
 
@@ -33,10 +19,6 @@ export class MessageBridge {
         this.config = config;
     }
 
-    /**
-     * Send an executable message to the message bridge
-     * maxFee is required and must be provided by the caller.
-     */
     async sendExecutableMessage(params: SendExecutableMessageParams): Promise<TransactionResult> {
         console.log('=== Message Bridge - Send Executable Message ===');
 
@@ -46,21 +28,18 @@ export class MessageBridge {
         console.log(`[sendExecutableMessage] Message Data (${messageData.length} bytes):`, hexMessage);
         console.log(`[sendExecutableMessage] Store Result: ${params.storeResult}`);
 
-        // Require sendingFee to be provided
         if (params.sendingFee === undefined || params.sendingFee === null) {
             throw new InvalidParameterError("sendingFee");
         }
         const sendingFee = params.sendingFee;
         console.log(`[sendExecutableMessage] Sending Fee: ${sendingFee} (10^-8 GAS units)`);
 
-        // Ensure scriptHash is 40 hex chars, no 0x prefix
         let feeSponsor = this.config.account.scriptHash;
         if (feeSponsor.startsWith('0x')) feeSponsor = feeSponsor.slice(2);
         if (feeSponsor.length !== 40) {
             throw new InvalidParameterError(`feeSponsor`, `40 hex chars`);
         }
 
-        // Prepare contract parameters
         const args = [
             neonAdapter.create.contractParam('ByteArray', hexMessage),
             neonAdapter.create.contractParam('Boolean', params.storeResult),
@@ -76,29 +55,22 @@ export class MessageBridge {
         );
     }
 
-    /**
-     * Send a result message to the message bridge
-     * maxFee is required and must be provided by the caller.
-     */
     async sendResultMessage(params: SendResultMessageParams): Promise<TransactionResult> {
         console.log('=== Message Bridge - Send Result Message ===');
         console.log(`Related nonce: ${params.nonce}`);
 
-        // Require sendingFee to be provided
         if (params.sendingFee === undefined || params.sendingFee === null) {
             throw new InvalidParameterError("sendingFee");
         }
         const sendingFee = params.sendingFee;
         console.log(`[sendResultMessage] Sending Fee: ${sendingFee} (10^-8 GAS units)`);
 
-        // Ensure scriptHash is 40 hex chars, no 0x prefix
         let feeSponsor = this.config.account.scriptHash;
         if (feeSponsor.startsWith('0x')) feeSponsor = feeSponsor.slice(2);
         if (feeSponsor.length !== 40) {
             throw new InvalidParameterError(`feeSponsor`, `40 hex chars`);
         }
 
-        // Prepare contract parameters
         const args = [
             neonAdapter.create.contractParam('Integer', params.nonce),
             neonAdapter.create.contractParam('Hash160', feeSponsor),
@@ -113,10 +85,6 @@ export class MessageBridge {
         );
     }
 
-    /**
-     * Send a store-only message to the message bridge
-     * maxFee is required and must be provided by the caller.
-     */
     async sendStoreOnlyMessage(params: SendStoreOnlyMessageParams): Promise<TransactionResult> {
         console.log('=== Message Bridge - Send Store-Only Message ===');
 
@@ -125,21 +93,18 @@ export class MessageBridge {
         if (hexMessage.startsWith('0x')) hexMessage = hexMessage.slice(2);
         console.log(`[sendStoreOnlyMessage] Message Data (${messageData.length} bytes):`, hexMessage);
 
-        // Require sendingFee to be provided
         if (params.sendingFee === undefined || params.sendingFee === null) {
             throw new InvalidParameterError("sendingFee");
         }
         const sendingFee = params.sendingFee;
         console.log(`[sendStoreOnlyMessage] Sending Fee: ${sendingFee} (10^-8 GAS units)`);
 
-        // Ensure scriptHash is 40 hex chars, no 0x prefix
         let feeSponsor = this.config.account.scriptHash;
         if (feeSponsor.startsWith('0x')) feeSponsor = feeSponsor.slice(2);
         if (feeSponsor.length !== 40) {
             throw new InvalidParameterError(`feeSponsor`, `40 hex chars`);
         }
 
-        // Prepare contract parameters
         const args = [
             neonAdapter.create.contractParam('ByteArray', hexMessage),
             neonAdapter.create.contractParam('Hash160', feeSponsor),
@@ -154,25 +119,18 @@ export class MessageBridge {
         );
     }
 
-    /**
-     * Convert message data to byte array (private helper)
-     */
     private messageToBytes(messageData: string | number[]): number[] {
         if (Array.isArray(messageData)) {
             return messageData;
         }
 
-        // messageData is a string - check if it's a valid hex string
         const hexPattern = /^(0x)?[0-9a-fA-F]+$/;
         if (hexPattern.test(messageData)) {
-            // Remove 0x prefix if present
             const cleanHex = messageData.startsWith('0x') ? messageData.slice(2) : messageData;
-            // Ensure even length for proper hex conversion
             const evenHex = cleanHex.length % 2 === 0 ? cleanHex : '0' + cleanHex;
             const bytes = neonAdapter.utils.hexstring2ab(evenHex);
             return Array.from(new Uint8Array(bytes));
         } else {
-            // Treat as UTF-8 string
             console.log('Message is not in hexadecimal format - using UTF-8 bytes');
             const encoder = new TextEncoder();
             const bytes = encoder.encode(messageData);
@@ -180,9 +138,6 @@ export class MessageBridge {
         }
     }
 
-    /**
-     * Get the current sending fee from the contract (read-only)
-     */
     async sendingFee(): Promise<number> {
         const rpcClient = neonAdapter.create.rpcClient(this.config.rpcUrl);
         const result = await rpcClient.invokeFunction(
@@ -201,7 +156,6 @@ export class MessageBridge {
             throw new ContractInvocationError('No result returned from sendingFee call');
         }
 
-        // For Integer return type
         const feeValue = result.stack[0].value;
         if (feeValue === undefined || feeValue === null) {
             throw new ContractInvocationError('Invalid sending fee value returned from contract');
@@ -210,9 +164,6 @@ export class MessageBridge {
         return Number(feeValue);
     }
 
-    /**
-     * Send transaction to the contract (private helper)
-     */
     private async sendTransaction(
         operation: string,
         args: ContractParam[],
@@ -223,21 +174,17 @@ export class MessageBridge {
         console.log(`[sendTransaction] Sender Address: ${this.config.account.address}`);
         console.log(`[sendTransaction] Args:`, args.map(a => ({type: a.type, value: a.value})));
 
-        // Create the invocation script using neon-js sc module
         const script = neonAdapter.create.script({
             scriptHash: this.config.contractHash,
             operation: operation,
             args: args
         });
 
-        // Create RPC client for sending the transaction
         const rpcClient = neonAdapter.create.rpcClient(this.config.rpcUrl);
 
-        // Get current block height for transaction validity
         const currentHeight = await rpcClient.getBlockCount();
-        const validUntilBlock = currentHeight + 1000; // Valid for 1000 blocks
+        const validUntilBlock = currentHeight + 1000;
 
-        // Create transaction
         const tx = neonAdapter.create.transaction({
             signers: [{
                 account: this.config.account.scriptHash,
@@ -250,7 +197,6 @@ export class MessageBridge {
             script: script
         });
 
-        // --- Network Fee Calculation ---
         const feePerByteResp = await rpcClient.invokeFunction(
             neonAdapter.constants.NATIVE_CONTRACT_HASH.PolicyContract,
             "getFeePerByte"
@@ -269,7 +215,6 @@ export class MessageBridge {
             tx.networkFee = networkFee;
         }
 
-        // --- System Fee Calculation ---
         const hexContracts = allowedContracts.map(c => neonAdapter.utils.HexString.fromHex(c));
         const txSigner = neonAdapter.create.signer({
             account: neonAdapter.utils.HexString.fromHex(this.config.account.scriptHash),
@@ -289,7 +234,6 @@ export class MessageBridge {
         }
         tx.systemFee = neonAdapter.utils.BigInteger.fromNumber(invokeResp.gasconsumed);
 
-        // --- Balance Checks ---
         let balanceResponse: BalanceResponse;
         try {
             let req: QueryLike<any> = {
@@ -304,7 +248,6 @@ export class MessageBridge {
         } catch (e) {
             throw new MessageBridgeError("Unable to get balances: RPC plugin not available", "BALANCE_CHECK_FAILED");
         }
-        // Check for gas funds for fees
         const gasRequirements = tx.networkFee.add(tx.systemFee);
         const gasBalance = balanceResponse.balance.find((bal) =>
             bal.assethash.includes(neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken)
@@ -320,7 +263,6 @@ export class MessageBridge {
             );
         }
 
-        // --- Sign and Send Transaction ---
         const signedTx = tx.sign(this.config.account, this.config.networkMagic || 5195086);
         const result = await rpcClient.sendRawTransaction(
             neonAdapter.utils.HexString.fromHex(signedTx.serialize(true))

@@ -22,7 +22,6 @@ async function testWalletOperations() {
 
     console.log("Network Facade:", !!networkFacade);
 
-    // Load wallet from environment variable
     const walletPath = process.env.WALLET_PATH;
     const walletPassword = process.env.WALLET_PASSWORD || "";
 
@@ -30,19 +29,16 @@ async function testWalletOperations() {
         try {
             console.log(`Loading wallet from: ${walletPath}`);
 
-            // Create wallet using clean ESM adapter
             const walletInstance = createWalletFromFile(walletPath);
             console.log(`Wallet created - Name: ${walletInstance.name}`);
             console.log(`Number of accounts: ${walletInstance.accounts.length}`);
 
-            // Example of using the adapter directly for other operations (if accounts exist)
             if (walletInstance.accounts.length > 0) {
                 console.log(`Is valid address: ${neonAdapter.is.address(walletInstance.accounts[0].address)}`);
             }
 
             console.log(`password==${walletPassword}==`)
             if (walletPassword || walletPassword === "") {
-                // Load and decrypt the default account
                 const account = await createDecryptedAccountFromWalletFile(walletPath, walletPassword);
                 if (account) {
                     console.log(`Decrypted account loaded - Address: ${account.address}`);
@@ -51,7 +47,6 @@ async function testWalletOperations() {
                     console.log('No accounts found in wallet file');
                 }
             } else {
-                // Load account without decrypting
                 const account = createAccountFromWalletFile(walletPath);
                 if (account) {
                     console.log(`Account loaded - Address: ${account.address}`);
@@ -73,13 +68,11 @@ async function testMessageBridgeOperations() {
     console.log("\n=== Testing Message Bridge Operations ===");
 
     try {
-        // Create MessageBridge instance using the factory function
         const messageBridge = await createMessageBridgeFromEnvironment();
         console.log(`Message Bridge Contract: ${messageBridge['config'].contractHash}`);
         console.log(`Sender Account: ${messageBridge['config'].account.address}`);
         console.log(`RPC URL: ${messageBridge['config'].rpcUrl}`);
 
-        // Determine which operation to perform based on environment variables
         const operation = process.env.MESSAGE_OPERATION;
 
         switch (operation) {
@@ -113,7 +106,6 @@ async function performExecutableMessage(messageBridge: MessageBridge) {
 
     const storeResult = process.env.MESSAGE_STORE_RESULT === 'true';
 
-    // Test reading the sending fee (like contract.sendingFee())
     const sendingFee = await messageBridge.sendingFee();
     console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
 
@@ -123,7 +115,6 @@ async function performExecutableMessage(messageBridge: MessageBridge) {
         sendingFee
     };
 
-    // Call the method directly on the contract instance (ethers.js style)
     const result = await messageBridge.sendExecutableMessage(params);
     console.log('Executable message sent successfully:', result.txHash);
 }
@@ -136,10 +127,9 @@ async function performResultMessage(messageBridge: MessageBridge) {
 
     const params: SendResultMessageParams = {
         nonce: parseInt(nonce, 10),
-        sendingFee: 2000000 // Default fee value
+        sendingFee: 2000000
     };
 
-    // Call the method directly on the contract instance (ethers.js style)
     const result = await messageBridge.sendResultMessage(params);
     console.log('Result message sent successfully:', result.txHash);
 }
@@ -152,19 +142,16 @@ async function performStoreOnlyMessage(messageBridge: MessageBridge) {
 
     const params: SendStoreOnlyMessageParams = {
         messageData,
-        sendingFee: 2000000 // Default fee value
+        sendingFee: 2000000
     };
 
-    // Call the method directly on the contract instance (ethers.js style)
     const result = await messageBridge.sendStoreOnlyMessage(params);
     console.log('Store-only message sent successfully:', result.txHash);
 }
 
 async function main() {
-    // First test basic wallet operations
     await testWalletOperations();
 
-    // Then test message bridge operations if configuration is available
     const hasMessageBridgeConfig = process.env.MESSAGE_BRIDGE_CONTRACT_HASH && process.env.WALLET_PATH;
     if (hasMessageBridgeConfig) {
         await testMessageBridgeOperations();
@@ -181,9 +168,6 @@ async function main() {
     }
 }
 
-/**
- * Create a MessageBridge instance from environment variables
- */
 export async function createMessageBridgeFromEnvironment(): Promise<MessageBridge> {
     const contractHash = process.env.MESSAGE_BRIDGE_CONTRACT_HASH;
     if (!contractHash) {
@@ -198,15 +182,12 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     const walletPassword = process.env.WALLET_PASSWORD || '';
     const rpcUrl = process.env.N3_RPC_URL || 'http://localhost:40332';
 
-    // Load account - always try to decrypt if password is available
     let account: Account | null;
     if (walletPassword || walletPassword === "") {
         account = await createDecryptedAccountFromWalletFile(walletPath, walletPassword);
     } else {
-        // Try to load without password first
         account = createAccountFromWalletFile(walletPath);
 
-        // Check if the account has an encrypted private key
         if (account && account.tryGet("encrypted")) {
             throw new MessageBridgeError(
                 'Wallet contains encrypted private key but no WALLET_PASSWORD environment variable provided. Please set WALLET_PASSWORD to decrypt the wallet.',
@@ -235,8 +216,6 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     process.env.MESSAGE_OPERATION = "executable";
     process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
     process.env.MESSAGE_STORE_RESULT = "true";
-    // You must set WALLET_PATH and WALLET_PASSWORD in your environment or here if you want to automate fully
     process.env.WALLET_PATH = "personal.json";
-    // process.env.WALLET_PASSWORD = "yourpassword";
     await main();
 })();

@@ -1,11 +1,14 @@
 import { createAccountFromWalletFile, createDecryptedAccountFromWalletFile, createWalletFromFile } from "./wallet.js";
 import { neonAdapter } from "./neon-adapter.js";
+import { MessageBridge } from "./message-bridge.js";
 import {
-    MessageBridge,
+    MessageBridgeError,
+    type Account,
+    type MessageBridgeConfig,
     type SendExecutableMessageParams,
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams
-} from "./message-bridge.js";
+} from "./types.js";
 
 const url = process.env.NEO_NODE_URL || "http://localhost:40332";
 
@@ -70,8 +73,8 @@ async function testMessageBridgeOperations() {
     console.log("\n=== Testing Message Bridge Operations ===");
 
     try {
-        // Create MessageBridge instance using ethers.js-style initialization
-        const messageBridge = await MessageBridge.fromEnvironment();
+        // Create MessageBridge instance using the factory function
+        const messageBridge = await createMessageBridgeFromEnvironment();
         console.log(`Message Bridge Contract: ${messageBridge['config'].contractHash}`);
         console.log(`Sender Account: ${messageBridge['config'].account.address}`);
         console.log(`RPC URL: ${messageBridge['config'].rpcUrl}`);
@@ -132,7 +135,8 @@ async function performResultMessage(messageBridge: MessageBridge) {
     }
 
     const params: SendResultMessageParams = {
-        nonce: parseInt(nonce, 10)
+        nonce: parseInt(nonce, 10),
+        sendingFee: 2000000 // Default fee value
     };
 
     // Call the method directly on the contract instance (ethers.js style)
@@ -147,7 +151,8 @@ async function performStoreOnlyMessage(messageBridge: MessageBridge) {
     }
 
     const params: SendStoreOnlyMessageParams = {
-        messageData
+        messageData,
+        sendingFee: 2000000 // Default fee value
     };
 
     // Call the method directly on the contract instance (ethers.js style)
@@ -176,6 +181,53 @@ async function main() {
     }
 }
 
+/**
+ * Create a MessageBridge instance from environment variables
+ */
+export async function createMessageBridgeFromEnvironment(): Promise<MessageBridge> {
+    const contractHash = process.env.MESSAGE_BRIDGE_CONTRACT_HASH;
+    if (!contractHash) {
+        throw new MessageBridgeError('MESSAGE_BRIDGE_CONTRACT_HASH environment variable is required', 'MISSING_CONTRACT_HASH');
+    }
+
+    const walletPath = process.env.WALLET_PATH;
+    if (!walletPath) {
+        throw new MessageBridgeError('WALLET_PATH environment variable is required', 'MISSING_WALLET_PATH');
+    }
+
+    const walletPassword = process.env.WALLET_PASSWORD || '';
+    const rpcUrl = process.env.N3_RPC_URL || 'http://localhost:40332';
+
+    // Load account - always try to decrypt if password is available
+    let account: Account | null;
+    if (walletPassword || walletPassword === "") {
+        account = await createDecryptedAccountFromWalletFile(walletPath, walletPassword);
+    } else {
+        // Try to load without password first
+        account = createAccountFromWalletFile(walletPath);
+
+        // Check if the account has an encrypted private key
+        if (account && account.tryGet("encrypted")) {
+            throw new MessageBridgeError(
+                'Wallet contains encrypted private key but no WALLET_PASSWORD environment variable provided. Please set WALLET_PASSWORD to decrypt the wallet.',
+                'ENCRYPTED_WALLET_NO_PASSWORD'
+            );
+        }
+    }
+
+    if (!account) {
+        throw new MessageBridgeError('Failed to load account from wallet file', 'ACCOUNT_LOAD_FAILED');
+    }
+
+    const config: MessageBridgeConfig = {
+        contractHash,
+        rpcUrl,
+        account
+    };
+
+    return new MessageBridge(config);
+}
+
 // --- AUTO-TEST: MessageBridge executable message (match Java example) ---
 (async () => {
     process.env.MESSAGE_BRIDGE_CONTRACT_HASH = "bd98300a1951d72533fa749010265f71c4cfff38";
@@ -188,8 +240,3 @@ async function main() {
     // process.env.WALLET_PASSWORD = "yourpassword";
     await main();
 })();
-
-// main().catch((error) => {
-//     console.error('Application error:', error);
-//     process.exitCode = 1;
-// });

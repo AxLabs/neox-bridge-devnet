@@ -36,6 +36,7 @@ import type { KeyType } from "@cityofzion/neon-core/lib/wallet/Account";
 import type { ScryptParams } from "@cityofzion/neon-core/lib/wallet/nep2";
 import type { TransactionLike } from "@cityofzion/neon-core/lib/tx/transaction/Transaction";
 import type { SignerLike } from "@cityofzion/neon-core/lib/tx/components/Signer";
+// Import WitnessScope enum for re-exporting
 import { WitnessScope } from "@cityofzion/neon-core/lib/tx/components/WitnessScope";
 
 // Normalize the neon-js exports to proper ESM structure
@@ -86,6 +87,7 @@ export type Network = InstanceType<typeof rpc.Network>;
 export type StringStream = InstanceType<typeof u.StringStream>;
 export type Transaction = InstanceType<typeof tx.Transaction>;
 export type TransactionSigner = InstanceType<typeof tx.Signer>;
+export type { TransactionLike, SignerLike, QueryLike };
 // Re-export WitnessScope enum
 export { WitnessScope };
 
@@ -102,7 +104,7 @@ export interface NeonAdapter {
         script: typeof sc.createScript;
         scriptBuilder: () => ScriptBuilder;
         rpcClient: (net: string) => RPCClient;
-        query: (req: QueryLike<unknown[]>) => Query;
+        query: (req: QueryLike<any>) => Query;
         network: (net: Partial<NetworkJSON>) => Network;
         stringStream: (str?: string) => StringStream;
         transaction: (tx?: Partial<Pick<TransactionLike | Transaction, keyof TransactionLike>>) => Transaction;
@@ -188,7 +190,7 @@ export const neonAdapter: NeonAdapter = {
         rpcClient: (net: string): RPCClient => {
             return Neon.create.rpcClient(net);
         },
-        query: (req: QueryLike<unknown[]>): Query => {
+        query: (req: QueryLike<any>): Query => {
             return Neon.create.query(req);
         },
         network: (net: Partial<NetworkJSON>): Network => {

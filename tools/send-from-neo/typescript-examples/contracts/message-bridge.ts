@@ -15,7 +15,7 @@ import { BasicParams, MessageParams } from "../types/interfaces";
 export class MessageBridge {
 
     private config: MessageBridgeConfig;
-    private readonly rpcClient;
+    readonly rpcClient;
 
     constructor(config: MessageBridgeConfig) {
         this.config = config;

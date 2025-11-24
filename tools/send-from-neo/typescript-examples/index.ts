@@ -75,23 +75,30 @@ async function testMessageBridgeOperations() {
         // Test read-only methods first
         await testReadOnlyMethods(messageBridge);
 
-        const operation = process.env.MESSAGE_OPERATION;
+        const operation = process.env.MESSAGE_BRIDGE_OPERATION;
 
         switch (operation) {
-            case 'executable':
+            case 'send-executable':
                 await sendExecutableMessage(messageBridge);
                 break;
-            case 'result':
+            case 'send-result':
                 await sendResultMessage(messageBridge);
                 break;
-            case 'store-only':
+            case 'send-store-only':
                 await sendStoreOnlyMessage(messageBridge);
+                break;
+            case 'pause-all-test':
+                await testAllPauseOperations(messageBridge);
                 break;
             default:
                 console.log('No MESSAGE_OPERATION specified. Available operations:');
                 console.log('- executable: Send an executable message');
                 console.log('- result: Send a result message');
                 console.log('- store-only: Send a store-only message');
+                console.log('- pause-test: Test pause/unpause entire contract with state checks');
+                console.log('- pause-sending-test: Test pause/unpause sending operations with state checks');
+                console.log('- pause-executing-test: Test pause/unpause executing operations with state checks');
+                console.log('- pause-all-test: Test all pause/unpause operations with comprehensive state checks');
                 console.log('\nSet MESSAGE_OPERATION environment variable to run a specific operation.');
         }
 
@@ -109,15 +116,6 @@ async function testReadOnlyMethods(messageBridge: MessageBridge) {
 
         const sendingFee = await messageBridge.sendingFee();
         console.log(`Sending Fee: ${sendingFee} (10^-8 GAS units)`);
-
-        const isPaused = await messageBridge.isPaused();
-        console.log(`Is Paused: ${isPaused}`);
-
-        const sendingIsPaused = await messageBridge.sendingIsPaused();
-        console.log(`Sending Is Paused: ${sendingIsPaused}`);
-
-        const executingIsPaused = await messageBridge.executingIsPaused();
-        console.log(`Executing Is Paused: ${executingIsPaused}`);
 
     } catch (error) {
         console.error('Failed to call read-only methods:', error instanceof Error ? error.message : error);
@@ -226,15 +224,107 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     return new MessageBridge(config);
 }
 
+async function waitForStateUpdate(waitMs: number = 1000): Promise<void> {
+    console.log(`  Waiting ${waitMs}ms for state update...`);
+    return new Promise(resolve => setTimeout(resolve, waitMs));
+}
+
+async function testAllPauseOperations(messageBridge: MessageBridge) {
+    console.log("\n--- Testing All Pause/Unpause Operations ---");
+
+    // Get block time estimate if available from the rpcClient
+    const version = await messageBridge.rpcClient.getVersion();
+    const waitInterval = version.protocol.msperblock;
+
+    try {
+        // Check initial state
+        console.log("\n1. Initial State Check:");
+        let pausedStates = await logPauseStates(messageBridge);
+
+        // Test general pause
+        console.log("\n2. Testing general pause/unpause...");
+        if (pausedStates && !pausedStates.isPaused) {
+            const generalPauseResult = await messageBridge.pause();
+            console.log(`General pause transaction: ${generalPauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+            pausedStates = await logPauseStates(messageBridge);
+        }
+
+        if (pausedStates && pausedStates.isPaused) {
+            const generalUnpauseResult = await messageBridge.unpause();
+            console.log(`General unpause transaction: ${generalUnpauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+            pausedStates = await logPauseStates(messageBridge);
+        }
+
+        // Test sending pause
+        if (pausedStates && !pausedStates.sendingIsPaused) {
+            console.log("\n3. Testing sending pause/unpause...");
+            const sendingPauseResult = await messageBridge.pauseSending();
+            console.log(`Sending pause transaction: ${sendingPauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+            await logPauseStates(messageBridge);
+        }
+
+        if (pausedStates && pausedStates.sendingIsPaused) {
+            const sendingUnpauseResult = await messageBridge.unpauseSending();
+            console.log(`Sending unpause transaction: ${sendingUnpauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+            pausedStates = await logPauseStates(messageBridge);
+        }
+
+        // Test executing pause
+        if (pausedStates && !pausedStates.executingIsPaused) {
+            console.log("\n4. Testing executing pause/unpause...");
+            const executingPauseResult = await messageBridge.pauseExecuting();
+            console.log(`Executing pause transaction: ${executingPauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+            pausedStates = await logPauseStates(messageBridge);
+        }
+
+        if (pausedStates && pausedStates.executingIsPaused) {
+            const executingUnpauseResult = await messageBridge.unpauseExecuting();
+            console.log(`Executing unpause transaction: ${executingUnpauseResult.txHash}`);
+            await waitForStateUpdate(waitInterval);
+
+            await logPauseStates(messageBridge);
+        }
+
+
+        console.log("\n5. Final State Check:");
+        await logPauseStates(messageBridge);
+
+    } catch (error) {
+        console.error('All pause operations test failed:', error instanceof Error ? error.message : error);
+    }
+}
+
+async function logPauseStates(messageBridge: MessageBridge) {
+    try {
+        const isPaused = await messageBridge.isPaused();
+        const sendingIsPaused = await messageBridge.sendingIsPaused();
+        const executingIsPaused = await messageBridge.executingIsPaused();
+
+        console.log(`  General Paused: ${isPaused}`);
+        console.log(`  Sending Paused: ${sendingIsPaused}`);
+        console.log(`  Executing Paused: ${executingIsPaused}`);
+        return { isPaused, sendingIsPaused, executingIsPaused };
+    } catch (error) {
+        console.error('  Failed to get pause states:', error instanceof Error ? error.message : error);
+    }
+}
+
+
 // --- AUTO-TEST: MessageBridge executable message (match Java example) ---
 (async () => {
     process.env.MESSAGE_BRIDGE_CONTRACT_HASH = "bd98300a1951d72533fa749010265f71c4cfff38";
     process.env.NEO_NODE_URL = "http://seed3t5.neo.org:40332";
-    process.env.MESSAGE_OPERATION = "executable";
-    process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
-    // process.env.MESSAGE_OPERATION = "store-only";
+    // process.env.MESSAGE_BRIDGE_OPERATION = "send-executable";
+    // process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
+    // process.env.MESSAGE_STORE_RESULT = "true";
+    // process.env.MESSAGE_BRIDGE_OPERATION = "send-store-only";
     // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
-    process.env.MESSAGE_STORE_RESULT = "true";
-    process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/personal.json";
+    process.env.MESSAGE_BRIDGE_OPERATION = "pause-all-test";
+    process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/governor.json";
     await main();
 })();

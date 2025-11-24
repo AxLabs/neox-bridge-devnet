@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "relayer"
+    static_configs:
+      - targets: ["host.docker.internal:2112"]
+
+  - job_name: "validator"
+    static_configs:
+      - targets: ["host.docker.internal:2113"]
+        labels:
+          instance: "validator-1"
+      - targets: [ "host.docker.internal:2114" ]
+        labels:
+          instance: "validator-2"

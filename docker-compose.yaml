@@ -191,10 +191,11 @@ services:
     user: '0'
     ports:
       - '3000:3000'
-    volumes: # Binding a volume for
-      - $PWD/monitoring/grafana/data:/var/lib/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Bind the provisioning directory (keep track of data sources and dashboards config)
       - $PWD/monitoring/grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   rabbitmq_data:
-  grafana-storage: { }
+  grafana_data:

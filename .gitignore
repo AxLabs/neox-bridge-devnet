@@ -5,3 +5,4 @@ addresses/
 personal.json
 
 monitoring/grafana/data/
+monitoring/grafana/provisioning/

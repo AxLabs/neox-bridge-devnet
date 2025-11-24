@@ -1,6 +1,10 @@
-import { createAccountFromWalletFile, createDecryptedAccountFromWalletFile, createWalletFromFile } from "./wallet.js";
+import {
+    createAccountFromWalletFile,
+    createDecryptedAccountFromWalletFile,
+    createWalletFromFile
+} from "./wallet/wallet";
 import { neonAdapter } from "./neo/neon-adapter";
-import { MessageBridge } from "./message-bridge.js";
+import { MessageBridge } from "./contracts/message-bridge";
 import {
     type Account,
     GenericError,
@@ -14,7 +18,6 @@ const url = process.env.NEO_NODE_URL || "http://localhost:40332";
 
 async function testWalletOperations() {
     console.log("=== Testing Wallet Operations ===");
-    console.log("ESM Neon Adapter:", !!neonAdapter);
 
     const networkFacade = await neonAdapter.apiWrapper.NetworkFacade.fromConfig({
         node: url
@@ -37,7 +40,6 @@ async function testWalletOperations() {
                 console.log(`Is valid address: ${neonAdapter.is.address(walletInstance.accounts[0].address)}`);
             }
 
-            console.log(`password==${walletPassword}==`)
             if (walletPassword || walletPassword === "") {
                 const account = await createDecryptedAccountFromWalletFile(walletPath, walletPassword);
                 if (account) {
@@ -59,8 +61,8 @@ async function testWalletOperations() {
             console.error('Error loading wallet:', error instanceof Error ? error.message : error);
         }
     } else {
-        console.log('No WALLET_PATH environment variable set. Set it to load a wallet.');
-        console.log('Example: WALLET_PATH=/path/to/wallet.json npm run dev');
+        console.error('No WALLET_PATH environment variable set. Set it to load a wallet.');
+        console.error('Example: WALLET_PATH=/path/to/wallet.json npm run dev');
     }
 }
 
@@ -69,21 +71,21 @@ async function testMessageBridgeOperations() {
 
     try {
         const messageBridge = await createMessageBridgeFromEnvironment();
-        console.log(`Message Bridge Contract: ${messageBridge['config'].contractHash}`);
-        console.log(`Sender Account: ${messageBridge['config'].account.address}`);
-        console.log(`RPC URL: ${messageBridge['config'].rpcUrl}`);
+
+        // Test read-only methods first
+        await testReadOnlyMethods(messageBridge);
 
         const operation = process.env.MESSAGE_OPERATION;
 
         switch (operation) {
             case 'executable':
-                await performExecutableMessage(messageBridge);
+                await sendExecutableMessage(messageBridge);
                 break;
             case 'result':
-                await performResultMessage(messageBridge);
+                await sendResultMessage(messageBridge);
                 break;
             case 'store-only':
-                await performStoreOnlyMessage(messageBridge);
+                await sendStoreOnlyMessage(messageBridge);
                 break;
             default:
                 console.log('No MESSAGE_OPERATION specified. Available operations:');
@@ -98,7 +100,31 @@ async function testMessageBridgeOperations() {
     }
 }
 
-async function performExecutableMessage(messageBridge: MessageBridge) {
+async function testReadOnlyMethods(messageBridge: MessageBridge) {
+    console.log("\n--- Testing Read-Only Methods ---");
+
+    try {
+        const version = await messageBridge.version();
+        console.log(`Contract Version: ${version}`);
+
+        const sendingFee = await messageBridge.sendingFee();
+        console.log(`Sending Fee: ${sendingFee} (10^-8 GAS units)`);
+
+        const isPaused = await messageBridge.isPaused();
+        console.log(`Is Paused: ${isPaused}`);
+
+        const sendingIsPaused = await messageBridge.sendingIsPaused();
+        console.log(`Sending Is Paused: ${sendingIsPaused}`);
+
+        const executingIsPaused = await messageBridge.executingIsPaused();
+        console.log(`Executing Is Paused: ${executingIsPaused}`);
+
+    } catch (error) {
+        console.error('Failed to call read-only methods:', error instanceof Error ? error.message : error);
+    }
+}
+
+async function sendExecutableMessage(messageBridge: MessageBridge) {
     const messageData = process.env.MESSAGE_EXECUTABLE_DATA;
     if (!messageData) {
         throw new Error('MESSAGE_EXECUTABLE_DATA environment variable is required for executable messages');
@@ -107,7 +133,6 @@ async function performExecutableMessage(messageBridge: MessageBridge) {
     const storeResult = process.env.MESSAGE_STORE_RESULT === 'true';
 
     const sendingFee = await messageBridge.sendingFee();
-    console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
 
     const params: SendExecutableMessageParams = {
         messageData,
@@ -119,14 +144,13 @@ async function performExecutableMessage(messageBridge: MessageBridge) {
     console.log('Executable message sent successfully:', result.txHash);
 }
 
-async function performResultMessage(messageBridge: MessageBridge) {
+async function sendResultMessage(messageBridge: MessageBridge) {
     const nonce = process.env.MESSAGE_NONCE;
     if (!nonce) {
         throw new Error('MESSAGE_NONCE environment variable is required for result messages');
     }
 
     const sendingFee = await messageBridge.sendingFee();
-    console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
 
     const params: SendResultMessageParams = {
         nonce: parseInt(nonce, 10),
@@ -137,14 +161,13 @@ async function performResultMessage(messageBridge: MessageBridge) {
     console.log('Result message sent successfully:', result.txHash);
 }
 
-async function performStoreOnlyMessage(messageBridge: MessageBridge) {
+async function sendStoreOnlyMessage(messageBridge: MessageBridge) {
     const messageData = process.env.MESSAGE_STORE_ONLY_DATA;
     if (!messageData) {
         throw new GenericError('MESSAGE_STORE_ONLY_DATA environment variable is required for store-only messages');
     }
 
     const sendingFee = await messageBridge.sendingFee();
-    console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
 
     const params: SendStoreOnlyMessageParams = {
         messageData,
@@ -158,20 +181,8 @@ async function performStoreOnlyMessage(messageBridge: MessageBridge) {
 async function main() {
     await testWalletOperations();
 
-    const hasMessageBridgeConfig = process.env.MESSAGE_BRIDGE_CONTRACT_HASH && process.env.WALLET_PATH;
-    if (hasMessageBridgeConfig) {
-        await testMessageBridgeOperations();
-    } else {
-        console.log('\n=== Message Bridge Operations Skipped ===');
-        console.log('To test message bridge operations, set these environment variables:');
-        console.log('- MESSAGE_BRIDGE_CONTRACT_HASH: Contract hash of the message bridge');
-        console.log('- WALLET_PATH: Path to wallet file');
-        console.log('- WALLET_PASSWORD: Wallet password (optional)');
-        console.log('- MESSAGE_OPERATION: Operation type (executable, result, store-only)');
-        console.log('- MESSAGE_*_DATA: Message data for the specific operation');
-        console.log('\nExample usage:');
-        console.log('MESSAGE_BRIDGE_CONTRACT_HASH="0x123..." WALLET_PATH="./wallet.json" MESSAGE_OPERATION="executable" MESSAGE_EXECUTABLE_DATA="Hello World" npm run dev');
-    }
+    await testMessageBridgeOperations();
+
 }
 
 export async function createMessageBridgeFromEnvironment(): Promise<MessageBridge> {
@@ -219,11 +230,11 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
 (async () => {
     process.env.MESSAGE_BRIDGE_CONTRACT_HASH = "bd98300a1951d72533fa749010265f71c4cfff38";
     process.env.NEO_NODE_URL = "http://seed3t5.neo.org:40332";
-    // process.env.MESSAGE_OPERATION = "executable";
-    // process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
-    process.env.MESSAGE_OPERATION = "store-only";
-    process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
+    process.env.MESSAGE_OPERATION = "executable";
+    process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
+    // process.env.MESSAGE_OPERATION = "store-only";
+    // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
     process.env.MESSAGE_STORE_RESULT = "true";
-    process.env.WALLET_PATH = "personal.json";
+    process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/personal.json";
     await main();
 })();

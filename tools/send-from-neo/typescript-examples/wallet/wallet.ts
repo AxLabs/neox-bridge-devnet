@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { neonAdapter, type Wallet, type Account, type WalletJSON } from "./neo/neon-adapter";
+import { type Account, neonAdapter, type Wallet, type WalletJSON } from "../neo/neon-adapter";
 
 /**
  * Creates a Wallet from a Neo3 wallet JSON file using the ESM-normalized neon adapter
@@ -23,14 +23,12 @@ export function createWalletFromFile(walletPath: string): Wallet {
  * @param walletPath - Path to the Neo3 wallet JSON file
  * @returns Account instance or null if no accounts found
  */
-export function createAccountFromWalletFile(walletPath: string): Account | null {
+export function createAccountFromWalletFile(walletPath: string): Account {
     try {
         const walletInstance = createWalletFromFile(walletPath);
 
         // Get the default account or first account
-        const defaultAccount = walletInstance.accounts.find((acc: Account) => acc.isDefault) || walletInstance.accounts[0];
-
-        return defaultAccount || null;
+        return walletInstance.accounts.find((acc: Account) => acc.isDefault) || walletInstance.accounts[0];
     } catch (error) {
         throw new Error(`Failed to load account from ${walletPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -43,12 +41,5 @@ export function createAccountFromWalletFile(walletPath: string): Account | null 
  * @returns Decrypted Account instance or null if no accounts found
  */
 export async function createDecryptedAccountFromWalletFile(walletPath: string, password: string): Promise<Account | null> {
-    const account = createAccountFromWalletFile(walletPath);
-
-    if (!account) {
-        return null;
-    }
-
-    await account.decrypt(password);
-    return account;
+    return createAccountFromWalletFile(walletPath).decrypt(password);
 }

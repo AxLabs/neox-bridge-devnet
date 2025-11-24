@@ -1,4 +1,4 @@
-import { neonAdapter } from "./neo/neon-adapter";
+import { neonAdapter } from "../neo/neon-adapter";
 import {
     ContractInvocationError,
     InvalidParameterError,
@@ -7,10 +7,10 @@ import {
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams,
     type TransactionResult
-} from "./types";
-import { invokeMethod } from "./neo/rpc-utils";
-import { sendContractTransaction } from "./neo/neo-utils";
-import { BasicParams, MessageParams } from "./types/interfaces";
+} from "../types";
+import { invokeMethod } from "../neo/rpc-utils";
+import { sendContractTransaction } from "../neo/neo-utils";
+import { BasicParams, MessageParams } from "../types/interfaces";
 
 export class MessageBridge {
 
@@ -20,11 +20,10 @@ export class MessageBridge {
     constructor(config: MessageBridgeConfig) {
         this.config = config;
         this.rpcClient = neonAdapter.create.rpcClient(config.rpcUrl);
-        console.log(`Initialized MessageBridge with RPC URL: ${config.rpcUrl}`);
-        this.rpcClient.getVersion().then(v => console.log(`Magic Number: ${v.protocol.network}`));
-        console.log(`Contract Hash: ${config.contractHash}`);
-        console.log(`Sender Account: ${config.account.address}`);
-
+        console.log(`[MB] Initialized MessageBridge with RPC URL: ${config.rpcUrl}`);
+        this.rpcClient.getVersion().then(v => console.log(`[MB] Magic Number: ${v.protocol.network}`));
+        console.log(`[MB] Contract Hash: ${config.contractHash}`);
+        console.log(`[MB] Sender Account: ${config.account.address}`);
     }
 
     // region version
@@ -37,7 +36,18 @@ export class MessageBridge {
         }
 
         if (typeof versionValue === 'string') {
-            return neonAdapter.utils.hexstring2str(versionValue);
+            try {
+                // Try to decode as base64 first
+                return atob(versionValue);
+            } catch {
+                try {
+                    // Fallback to hex decoding if base64 fails
+                    return neonAdapter.utils.hexstring2str(versionValue);
+                } catch {
+                    // If both fail, return as string
+                    return String(versionValue);
+                }
+            }
         } else {
             return String(versionValue);
         }

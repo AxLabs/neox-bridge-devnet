@@ -1,4 +1,4 @@
-import { neonAdapter } from "../neo/neon-adapter";
+import { HexString, neonAdapter } from "../neo/neon-adapter";
 import {
     ContractInvocationError,
     InvalidParameterError,
@@ -37,18 +37,8 @@ export class MessageBridge {
         }
 
         if (typeof versionValue === 'string') {
-            try {
-                // Try to decode as base64 first
-                return Buffer.from(versionValue, 'base64').toString('utf-8');
-            } catch {
-                try {
-                    // Fallback to hex decoding if base64 fails
-                    return neonAdapter.utils.hexstring2str(versionValue);
-                } catch {
-                    // If both fail, return as string
-                    return String(versionValue);
-                }
-            }
+            let hexString = neonAdapter.utils.base642hex(versionValue);
+            return neonAdapter.utils.hexstring2str(hexString);
         } else {
             return String(versionValue);
         }
@@ -220,8 +210,6 @@ export class MessageBridge {
     }
     // endregion
 
-
-
     async sendingFee(): Promise<number> {
         const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingFee.name);
 
@@ -242,15 +230,7 @@ export class MessageBridge {
         }
 
         if (typeof managementValue === 'string') {
-            try {
-                // Decode base64 to bytes, then convert to hex
-                const base64Decoded = Buffer.from(managementValue, 'base64');
-                let hexString = neonAdapter.utils.ab2hexstring(new Uint8Array(base64Decoded));
-                return `0x${hexString}`;
-            } catch {
-                // Fallback: if already hex, format it properly
-                return managementValue.startsWith('0x') ? managementValue : `0x${managementValue}`;
-            }
+            return `0x${neonAdapter.utils.base642hex(managementValue)}`;
         } else {
             return String(managementValue);
         }
@@ -294,7 +274,7 @@ export class MessageBridge {
         }
 
         if (typeof serializedValue === 'string') {
-            return serializedValue.startsWith('0x') ? serializedValue : `0x${serializedValue}`;
+            return `0x${neonAdapter.utils.base642hex(serializedValue)}`;
         } else {
             return String(serializedValue);
         }

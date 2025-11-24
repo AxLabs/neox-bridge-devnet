@@ -87,6 +87,9 @@ async function testMessageBridgeOperations() {
             case 'send-store-only':
                 await sendStoreOnlyMessage(messageBridge);
                 break;
+            case 'serialize-is-paused':
+                await serializeIsPausedCall(messageBridge);
+                break;
             case 'pause-all-test':
                 await testAllPauseOperations(messageBridge);
                 break;
@@ -95,6 +98,7 @@ async function testMessageBridgeOperations() {
                 console.log('- executable: Send an executable message');
                 console.log('- result: Send a result message');
                 console.log('- store-only: Send a store-only message');
+                console.log('- serialize-is-paused: Serialize a call to the isPaused method');
                 console.log('- pause-test: Test pause/unpause entire contract with state checks');
                 console.log('- pause-sending-test: Test pause/unpause sending operations with state checks');
                 console.log('- pause-executing-test: Test pause/unpause executing operations with state checks');
@@ -183,6 +187,25 @@ async function sendStoreOnlyMessage(messageBridge: MessageBridge) {
 
     const result = await messageBridge.sendStoreOnlyMessage(params);
     console.log('Store-only message sent successfully:', result.txHash);
+}
+
+async function serializeIsPausedCall(messageBridge: MessageBridge) {
+    try {
+        const contractHash = process.env.MESSAGE_BRIDGE_CONTRACT_HASH || "";
+
+        // Serialize a call to the isPaused method (no parameters)
+        const serializedCall = await messageBridge.serializeCall(
+            contractHash,
+            'isPaused',
+            0, // CallFlags.None
+            [] // No parameters
+        );
+
+        console.log('Serialized isPaused call:');
+        console.log(serializedCall);
+    } catch (error) {
+        console.error('Failed to serialize isPaused call:', error instanceof Error ? error.message : error);
+    }
 }
 
 async function main() {
@@ -333,7 +356,7 @@ async function logPauseStates(messageBridge: MessageBridge) {
     // process.env.MESSAGE_STORE_RESULT = "true";
     // process.env.MESSAGE_BRIDGE_OPERATION = "send-store-only";
     // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
-    process.env.MESSAGE_BRIDGE_OPERATION = "none";
+    process.env.MESSAGE_BRIDGE_OPERATION = "serialize-is-paused";
     process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/governor.json";
     await main();
 })();

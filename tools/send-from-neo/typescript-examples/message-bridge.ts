@@ -13,7 +13,6 @@ import { sendContractTransaction } from "./neo/neo-utils";
 import { BasicParams, MessageParams } from "./types/interfaces";
 
 export class MessageBridge {
-    private readonly sendingFeeMethod = 'sendingFee';
 
     private config: MessageBridgeConfig;
     private readonly rpcClient;
@@ -28,6 +27,125 @@ export class MessageBridge {
 
     }
 
+    // region version
+    async version(): Promise<string> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.version.name);
+
+        const versionValue = result.stack[0].value;
+        if (versionValue === undefined || versionValue === null) {
+            throw new ContractInvocationError('Invalid version value returned from contract');
+        }
+
+        if (typeof versionValue === 'string') {
+            return neonAdapter.utils.hexstring2str(versionValue);
+        } else {
+            return String(versionValue);
+        }
+    }
+    // endregion
+
+    // region pause
+    async isPaused(): Promise<boolean> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.isPaused.name);
+
+        const pausedValue = result.stack[0].value;
+        if (pausedValue === undefined || pausedValue === null) {
+            throw new ContractInvocationError('Invalid isPaused value returned from contract');
+        }
+
+        return Boolean(pausedValue);
+    }
+
+    async sendingIsPaused(): Promise<boolean> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingIsPaused.name);
+
+        const pausedValue = result.stack[0].value;
+        if (pausedValue === undefined || pausedValue === null) {
+            throw new ContractInvocationError('Invalid sendingIsPaused value returned from contract');
+        }
+
+        return Boolean(pausedValue);
+    }
+
+    async executingIsPaused(): Promise<boolean> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.executingIsPaused.name);
+
+        const pausedValue = result.stack[0].value;
+        if (pausedValue === undefined || pausedValue === null) {
+            throw new ContractInvocationError('Invalid executingIsPaused value returned from contract');
+        }
+
+        return Boolean(pausedValue);
+    }
+
+    async pause(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.pause.name,
+            [],
+            []
+        );
+    }
+
+    async unpause(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.unpause.name,
+            [],
+            []
+        );
+    }
+
+    async pauseSending(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.pauseSending.name,
+            [],
+            []
+        );
+    }
+
+    async unpauseSending(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.unpauseSending.name,
+            [],
+            []
+        );
+    }
+
+    async pauseExecuting(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.pauseExecuting.name,
+            [],
+            []
+        );
+    }
+
+    async unpauseExecuting(): Promise<TransactionResult> {
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.unpauseExecuting.name,
+            [],
+            []
+        );
+    }
+    // endregion
+
+    // region send messages
     async sendExecutableMessage(params: SendExecutableMessageParams): Promise<TransactionResult> {
         let feeSponsor = this.getValidSponsor();
         const maxFee = this.getValidMaxFee(params);
@@ -40,12 +158,11 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Integer', maxFee)
         ];
 
-        const method = 'sendExecutableMessage';
         return await sendContractTransaction(
             this.rpcClient,
             this.config.account,
             this.config.contractHash,
-            method,
+            this.sendExecutableMessage.name,
             args,
             [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
         );
@@ -60,12 +177,11 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Integer', maxFee)
         ];
 
-        const method = 'sendResultMessage';
         return await sendContractTransaction(
             this.rpcClient,
             this.config.account,
             this.config.contractHash,
-            method,
+            this.sendResultMessage.name,
             args,
             [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
         );
@@ -82,19 +198,19 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Integer', maxFee)
         ];
 
-        const method = 'sendStoreOnlyMessage';
         return await sendContractTransaction(
             this.rpcClient,
             this.config.account,
             this.config.contractHash,
-            method,
+            this.sendStoreOnlyMessage.name,
             args,
             [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
         );
     }
+    // endregion
 
     async sendingFee(): Promise<number> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingFeeMethod);
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingFee.name);
 
         const feeValue = result.stack[0].value;
         if (feeValue === undefined || feeValue === null) {

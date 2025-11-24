@@ -6,9 +6,9 @@ services:
       context: ./go-ethereum
       dockerfile: ../neox.Dockerfile
     ports:
-      - 8562:8562
+      - '8562:8562'
     healthcheck:
-      test: ["CMD", "sh", "-c", "nc -z localhost 8562"]
+      test: [ "CMD", "sh", "-c", "nc -z localhost 8562" ]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -49,7 +49,7 @@ services:
     environment:
       - NEOX_RPC_URL=http://neox-node:8562
       - DEPLOYER_WALLET_JSON=/app/wallets/deployer.json
-    command: ["bash", "/tools/deploy/deploy-neox-message-bridge-contracts.sh"]
+    command: [ "bash", "/tools/deploy/deploy-neox-message-bridge-contracts.sh" ]
     init: true
     restart: "no"
 
@@ -57,12 +57,12 @@ services:
     container_name: bridge-devnet-neon3
     image: ghcr.io/axlabs/neo3-privatenet-docker/neo-cli-with-plugins:neo-node-3.8.2
     ports:
-      - 40332:40332
+      - '40332:40332'
     healthcheck:
-      test: ["CMD-SHELL", "curl -sSf -X POST http://127.0.0.1:40332 \
+      test: [ "CMD-SHELL", "curl -sSf -X POST http://127.0.0.1:40332 \
         -H 'Content-Type: application/json' \
         -d '{\"jsonrpc\":\"2.0\",\"method\":\"getversion\",\"params\":[],\"id\":1}' \
-        | grep -q 'Neo'"]
+        | grep -q 'Neo'" ]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -97,13 +97,13 @@ services:
       - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
     working_dir: /tools/neon3-funding
     command: [
-      "sh", "-c", 
+      "sh", "-c",
       "echo \"Funding accounts...\" \
         && chmod u+x neon3-funding.sh \
         && ./neon3-funding.sh $$FUNDED_ADDRESS $$GAS_AMOUNT \
         echo \"Funding complete.\"
       "
-      ]
+    ]
 
   neon3-contracts:
     container_name: bridge-devnet-deploy-n3-message-bridge
@@ -161,17 +161,41 @@ services:
       RABBITMQ_DEFAULT_PASS: admin123
       RABBITMQ_DEFAULT_VHOST: /
     ports:
-      - 5672:5672
-      - 15672:15672
+      - '5672:5672'
+      - '15672:15672'
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     init: true
-#    healthcheck:
-#      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 5
-#      start_period: 30s
+  #    healthcheck:
+  #      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+  #      interval: 30s
+  #      timeout: 10s
+  #      retries: 5
+  #      start_period: 30s
+
+  prometheus:
+    image: prom/prometheus
+    container_name: bridge-devnet-prometheus
+    restart: unless-stopped
+    ports:
+      - '9090:9090'
+    volumes:
+      - $PWD/monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: bridge-devnet-grafana
+    restart: unless-stopped
+    # if you are running as root, then set it to 0
+    # else find the right id with the id -u command
+    user: '0'
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Bind the provisioning directory (keep track of data sources and dashboards config)
+      - $PWD/monitoring/grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   rabbitmq_data:
+  grafana_data:

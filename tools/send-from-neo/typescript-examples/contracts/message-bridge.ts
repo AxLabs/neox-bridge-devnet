@@ -11,6 +11,7 @@ import {
 import { invokeMethod } from "../neo/rpc-utils";
 import { sendContractTransaction } from "../neo/neo-utils";
 import { BasicParams, MessageParams } from "../types/interfaces";
+import { ContractParamJson } from "@cityofzion/neon-core/lib/sc/ContractParam";
 
 export class MessageBridge {
 
@@ -38,7 +39,7 @@ export class MessageBridge {
         if (typeof versionValue === 'string') {
             try {
                 // Try to decode as base64 first
-                return atob(versionValue);
+                return Buffer.from(versionValue, 'base64').toString('utf-8');
             } catch {
                 try {
                     // Fallback to hex decoding if base64 fails
@@ -219,6 +220,8 @@ export class MessageBridge {
     }
     // endregion
 
+
+
     async sendingFee(): Promise<number> {
         const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingFee.name);
 
@@ -228,6 +231,73 @@ export class MessageBridge {
         }
 
         return Number(feeValue);
+    }
+
+    async management(): Promise<string> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.management.name);
+
+        const managementValue = result.stack[0].value;
+        if (managementValue === undefined || managementValue === null) {
+            throw new ContractInvocationError('Invalid management value returned from contract');
+        }
+
+        if (typeof managementValue === 'string') {
+            try {
+                // Decode base64 to bytes, then convert to hex
+                const base64Decoded = Buffer.from(managementValue, 'base64');
+                let hexString = neonAdapter.utils.ab2hexstring(new Uint8Array(base64Decoded));
+                return `0x${hexString}`;
+            } catch {
+                // Fallback: if already hex, format it properly
+                return managementValue.startsWith('0x') ? managementValue : `0x${managementValue}`;
+            }
+        } else {
+            return String(managementValue);
+        }
+    }
+
+    async unclaimedFees(): Promise<number> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.unclaimedFees.name);
+
+        const unclaimedFeesValue = result.stack[0].value;
+        if (unclaimedFeesValue === undefined || unclaimedFeesValue === null) {
+            throw new ContractInvocationError('Invalid unclaimedFees value returned from contract');
+        }
+
+        return Number(unclaimedFeesValue);
+    }
+
+    async linkedChainId(): Promise<number> {
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.linkedChainId.name);
+
+        const linkedChainIdValue = result.stack[0].value;
+        if (linkedChainIdValue === undefined || linkedChainIdValue === null) {
+            throw new ContractInvocationError('Invalid linkedChainId value returned from contract');
+        }
+
+        return Number(linkedChainIdValue);
+    }
+
+    async serializeCall(target: string, method: string, callFlags: number, args: ContractParamJson[]): Promise<string> {
+        const params = [
+            neonAdapter.create.contractParam('Hash160', target.startsWith('0x') ? target.slice(2) : target),
+            neonAdapter.create.contractParam('String', method),
+            neonAdapter.create.contractParam('Integer', callFlags),
+            neonAdapter.create.contractParam('Array', args)
+        ];
+
+        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.serializeCall.name, params);
+
+        const serializedValue = result.stack[0].value;
+        if (serializedValue === undefined || serializedValue === null) {
+            throw new ContractInvocationError('Invalid serializeCall value returned from contract');
+        }
+
+        if (typeof serializedValue === 'string') {
+            return serializedValue.startsWith('0x') ? serializedValue : `0x${serializedValue}`;
+        } else {
+            return String(serializedValue);
+        }
     }
 
     private getValidSponsor() {

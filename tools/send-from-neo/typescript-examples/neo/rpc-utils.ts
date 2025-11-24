@@ -2,10 +2,11 @@ import { type HexString, type InvokeResult, neonAdapter, RPCClient, Signer } fro
 import { ContractInvocationError } from "../types";
 
 
-export async function invokeMethod(rpcClient: RPCClient, contractHash: string, method: string) {
+export async function invokeMethod(rpcClient: RPCClient, contractHash: string, method: string, args?: unknown[]): Promise<InvokeResult> {
     const result = await rpcClient.invokeFunction(
         contractHash,
-        method
+        method,
+        args || []
     );
 
     validateInvocationResult(result, contractHash, method);

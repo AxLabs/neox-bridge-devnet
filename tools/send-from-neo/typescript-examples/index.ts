@@ -117,6 +117,15 @@ async function testReadOnlyMethods(messageBridge: MessageBridge) {
         const sendingFee = await messageBridge.sendingFee();
         console.log(`Sending Fee: ${sendingFee} (10^-8 GAS units)`);
 
+        const managementAddress = await messageBridge.management();
+        console.log(`Management Contract Address: ${managementAddress}`);
+
+        const unclaimedFees = await messageBridge.unclaimedFees();
+        console.log(`Unclaimed Fees: ${unclaimedFees} (10^-8 GAS units)`);
+
+        const linkedChainId = await messageBridge.linkedChainId();
+        console.log(`Linked Chain ID: ${linkedChainId}`);
+
     } catch (error) {
         console.error('Failed to call read-only methods:', error instanceof Error ? error.message : error);
     }
@@ -324,7 +333,7 @@ async function logPauseStates(messageBridge: MessageBridge) {
     // process.env.MESSAGE_STORE_RESULT = "true";
     // process.env.MESSAGE_BRIDGE_OPERATION = "send-store-only";
     // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
-    process.env.MESSAGE_BRIDGE_OPERATION = "pause-all-test";
+    process.env.MESSAGE_BRIDGE_OPERATION = "none";
     process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/governor.json";
     await main();
 })();

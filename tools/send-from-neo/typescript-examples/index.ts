@@ -1,14 +1,14 @@
 import { createAccountFromWalletFile, createDecryptedAccountFromWalletFile, createWalletFromFile } from "./wallet.js";
-import { neonAdapter } from "./neon-adapter.js";
+import { neonAdapter } from "./neo/neon-adapter";
 import { MessageBridge } from "./message-bridge.js";
 import {
-    MessageBridgeError,
     type Account,
+    GenericError,
     type MessageBridgeConfig,
     type SendExecutableMessageParams,
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams
-} from "./types.js";
+} from "./types";
 
 const url = process.env.NEO_NODE_URL || "http://localhost:40332";
 
@@ -125,9 +125,12 @@ async function performResultMessage(messageBridge: MessageBridge) {
         throw new Error('MESSAGE_NONCE environment variable is required for result messages');
     }
 
+    const sendingFee = await messageBridge.sendingFee();
+    console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
+
     const params: SendResultMessageParams = {
         nonce: parseInt(nonce, 10),
-        sendingFee: 2000000
+        sendingFee: sendingFee
     };
 
     const result = await messageBridge.sendResultMessage(params);
@@ -137,12 +140,15 @@ async function performResultMessage(messageBridge: MessageBridge) {
 async function performStoreOnlyMessage(messageBridge: MessageBridge) {
     const messageData = process.env.MESSAGE_STORE_ONLY_DATA;
     if (!messageData) {
-        throw new Error('MESSAGE_STORE_ONLY_DATA environment variable is required for store-only messages');
+        throw new GenericError('MESSAGE_STORE_ONLY_DATA environment variable is required for store-only messages');
     }
+
+    const sendingFee = await messageBridge.sendingFee();
+    console.log(`Current sending fee: ${sendingFee} (10^-8 GAS units)`);
 
     const params: SendStoreOnlyMessageParams = {
         messageData,
-        sendingFee: 2000000
+        sendingFee: sendingFee
     };
 
     const result = await messageBridge.sendStoreOnlyMessage(params);
@@ -171,12 +177,12 @@ async function main() {
 export async function createMessageBridgeFromEnvironment(): Promise<MessageBridge> {
     const contractHash = process.env.MESSAGE_BRIDGE_CONTRACT_HASH;
     if (!contractHash) {
-        throw new MessageBridgeError('MESSAGE_BRIDGE_CONTRACT_HASH environment variable is required', 'MISSING_CONTRACT_HASH');
+        throw new GenericError('MESSAGE_BRIDGE_CONTRACT_HASH environment variable is required', 'MISSING_CONTRACT_HASH');
     }
 
     const walletPath = process.env.WALLET_PATH;
     if (!walletPath) {
-        throw new MessageBridgeError('WALLET_PATH environment variable is required', 'MISSING_WALLET_PATH');
+        throw new GenericError('WALLET_PATH environment variable is required', 'MISSING_WALLET_PATH');
     }
 
     const walletPassword = process.env.WALLET_PASSWORD || '';
@@ -189,7 +195,7 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
         account = createAccountFromWalletFile(walletPath);
 
         if (account && account.tryGet("encrypted")) {
-            throw new MessageBridgeError(
+            throw new GenericError(
                 'Wallet contains encrypted private key but no WALLET_PASSWORD environment variable provided. Please set WALLET_PASSWORD to decrypt the wallet.',
                 'ENCRYPTED_WALLET_NO_PASSWORD'
             );
@@ -197,7 +203,7 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     }
 
     if (!account) {
-        throw new MessageBridgeError('Failed to load account from wallet file', 'ACCOUNT_LOAD_FAILED');
+        throw new GenericError('Failed to load account from wallet file', 'ACCOUNT_LOAD_FAILED');
     }
 
     const config: MessageBridgeConfig = {
@@ -213,8 +219,10 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
 (async () => {
     process.env.MESSAGE_BRIDGE_CONTRACT_HASH = "bd98300a1951d72533fa749010265f71c4cfff38";
     process.env.NEO_NODE_URL = "http://seed3t5.neo.org:40332";
-    process.env.MESSAGE_OPERATION = "executable";
-    process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
+    // process.env.MESSAGE_OPERATION = "executable";
+    // process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
+    process.env.MESSAGE_OPERATION = "store-only";
+    process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
     process.env.MESSAGE_STORE_RESULT = "true";
     process.env.WALLET_PATH = "personal.json";
     await main();

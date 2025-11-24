@@ -36,6 +36,10 @@ import type { KeyType } from "@cityofzion/neon-core/lib/wallet/Account";
 import type { ScryptParams } from "@cityofzion/neon-core/lib/wallet/nep2";
 import type { TransactionLike } from "@cityofzion/neon-core/lib/tx/transaction/Transaction";
 import type { SignerLike } from "@cityofzion/neon-core/lib/tx/components/Signer";
+import type { BigInteger } from "@cityofzion/neon-core/lib/u";
+import type { HexString } from "@cityofzion/neon-core/lib/u";
+import type { InvokeResult } from "@cityofzion/neon-core/lib/rpc/Query"
+import type { StackItemJson } from "@cityofzion/neon-core/lib/sc/StackItem"
 // Import WitnessScope enum for re-exporting
 import { WitnessScope } from "@cityofzion/neon-core/lib/tx/components/WitnessScope";
 
@@ -86,9 +90,9 @@ export type Query = InstanceType<typeof rpc.Query>;
 export type Network = InstanceType<typeof rpc.Network>;
 export type StringStream = InstanceType<typeof u.StringStream>;
 export type Transaction = InstanceType<typeof tx.Transaction>;
-export type TransactionSigner = InstanceType<typeof tx.Signer>;
-export type { TransactionLike, SignerLike, QueryLike };
-// Re-export WitnessScope enum
+export type Signer = InstanceType<typeof tx.Signer>;
+export type { BigInteger, TransactionLike, SignerLike, QueryLike, InvokeResult, StackItemJson, HexString };
+// Re-export BigInteger class for runtime usage
 export { WitnessScope };
 
 // Define a union type for contract parameter values for convenience
@@ -108,7 +112,7 @@ export interface NeonAdapter {
         network: (net: Partial<NetworkJSON>) => Network;
         stringStream: (str?: string) => StringStream;
         transaction: (tx?: Partial<Pick<TransactionLike | Transaction, keyof TransactionLike>>) => Transaction;
-        signer: (signer?: Partial<SignerLike | TransactionSigner>) => TransactionSigner;
+        signer: (signer?: Partial<SignerLike | Signer>) => Signer;
     };
     is: {
         address: (str: string) => boolean;
@@ -202,7 +206,7 @@ export const neonAdapter: NeonAdapter = {
         transaction: (transaction?: Partial<Pick<TransactionLike | Transaction, keyof TransactionLike>>): Transaction => {
             return new tx.Transaction(transaction);
         },
-        signer: (signer?: Partial<SignerLike | TransactionSigner>): TransactionSigner => {
+        signer: (signer?: Partial<SignerLike | Signer>): Signer => {
             // Directly use the neon-js internals to create a Signer instance
             return new tx.Signer(signer);
         }

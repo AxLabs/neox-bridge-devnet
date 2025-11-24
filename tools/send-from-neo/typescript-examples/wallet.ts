@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { neonAdapter, type Wallet, type Account, type WalletJSON } from "./neon-adapter.js";
+import { neonAdapter, type Wallet, type Account, type WalletJSON } from "./neo/neon-adapter";
 
 /**
  * Creates a Wallet from a Neo3 wallet JSON file using the ESM-normalized neon adapter

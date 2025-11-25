@@ -5,6 +5,8 @@ scrape_configs:
   - job_name: "relayer"
     static_configs:
       - targets: ["host.docker.internal:2112"]
+        labels:
+          instance: "relayer"
 
   - job_name: "validator"
     static_configs:

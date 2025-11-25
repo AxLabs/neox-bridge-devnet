@@ -130,6 +130,53 @@ async function testReadOnlyMethods(messageBridge: MessageBridge) {
         const linkedChainId = await messageBridge.linkedChainId();
         console.log(`Linked Chain ID: ${linkedChainId}`);
 
+        const executionManagerAddress = await messageBridge.executionManager();
+        console.log(`Execution Manager Address: ${executionManagerAddress}`);
+
+        const neoToEvmNonce = await messageBridge.neoToEvmNonce();
+        console.log(`Neo to EVM Nonce: ${neoToEvmNonce}`);
+
+        const evmToNeoNonce = await messageBridge.evmToNeoNonce();
+        console.log(`EVM to Neo Nonce: ${evmToNeoNonce}`);
+
+        const neoToEvmRoot = await messageBridge.neoToEvmRoot();
+        console.log(`Neo to EVM Root: ${neoToEvmRoot}`);
+
+        const evmToNeoRoot = await messageBridge.evmToNeoRoot();
+        console.log(`EVM to Neo Root: ${evmToNeoRoot}`);
+
+        const messageBridgeInfo = await messageBridge.getMessageBridge();
+        console.log(`Message Bridge Info:`, messageBridgeInfo);
+
+        // Test methods that require parameters with example values
+        try {
+            const message = await messageBridge.getMessage(1);
+            console.log(`Message (nonce 1):`, message);
+        } catch (error) {
+            console.log(`getMessage(1): No message found or error - ${error instanceof Error ? error.message : error}`);
+        }
+
+        try {
+            const metadata = await messageBridge.getMetadata(1);
+            console.log(`Metadata (nonce 1):`, metadata);
+        } catch (error) {
+            console.log(`getMetadata(1): No metadata found or error - ${error instanceof Error ? error.message : error}`);
+        }
+
+        try {
+            const executableState = await messageBridge.getExecutableState(1);
+            console.log(`Executable State (nonce 1):`, executableState);
+        } catch (error) {
+            console.log(`getExecutableState(1): No state found or error - ${error instanceof Error ? error.message : error}`);
+        }
+
+        try {
+            const evmExecutionResult = await messageBridge.getEvmExecutionResult(1);
+            console.log(`EVM Execution Result (nonce 1): ${evmExecutionResult}`);
+        } catch (error) {
+            console.log(`getEvmExecutionResult(1): No result found or error - ${error instanceof Error ? error.message : error}`);
+        }
+
     } catch (error) {
         console.error('Failed to call read-only methods:', error instanceof Error ? error.message : error);
     }
@@ -356,7 +403,7 @@ async function logPauseStates(messageBridge: MessageBridge) {
     // process.env.MESSAGE_STORE_RESULT = "true";
     // process.env.MESSAGE_BRIDGE_OPERATION = "send-store-only";
     // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
-    process.env.MESSAGE_BRIDGE_OPERATION = "serialize-is-paused";
+    process.env.MESSAGE_BRIDGE_OPERATION = "none";
     process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/governor.json";
     await main();
 })();

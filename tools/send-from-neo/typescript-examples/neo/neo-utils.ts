@@ -44,21 +44,13 @@ export async function getGasBalance(rpcClient: RPCClient, accountAddress: string
 }
 
 export async function getFeePerByte(rpcClient: RPCClient) {
-    let feePerByte = "getFeePerByte";
-    const response = await invokeMethod(
-        rpcClient,
-        neonAdapter.constants.NATIVE_CONTRACT_HASH.PolicyContract,
-        feePerByte
-    );
-    const feePerByteValue =
-        response.stack && response.stack[0]
-        && (typeof response.stack[0].value === 'string' || typeof response.stack[0].value === 'number')
-            ? response.stack[0].value
-            : undefined;
-    if (feePerByteValue === undefined) {
-        throw new ContractInvocationError("Unable to retrieve network fee data from PolicyContract");
+    let methodName = "getFeePerByte";
+    const errorMessage = "Unable to retrieve network fee data from PolicyContract";
+    const response = await invokeMethod(rpcClient, neonAdapter.constants.NATIVE_CONTRACT_HASH.PolicyContract, methodName, errorMessage);
+    if (typeof response !== 'string' && typeof response !== 'number') {
+        throw new ContractInvocationError(errorMessage);
     }
-    return neonAdapter.utils.BigInteger.fromNumber(feePerByteValue);
+    return neonAdapter.utils.BigInteger.fromNumber(response);
 }
 
 export async function getSystemFee(rpcClient: RPCClient, script: HexString, txSigners: Signer[]) {

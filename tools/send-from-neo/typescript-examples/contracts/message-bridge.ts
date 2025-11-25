@@ -1,6 +1,5 @@
-import { HexString, neonAdapter } from "../neo/neon-adapter";
+import { ContractParam, neonAdapter } from "../neo/neon-adapter";
 import {
-    ContractInvocationError,
     InvalidParameterError,
     type MessageBridgeConfig,
     type SendExecutableMessageParams,
@@ -15,8 +14,8 @@ import { ContractParamJson } from "@cityofzion/neon-core/lib/sc/ContractParam";
 
 export class MessageBridge {
 
-    private config: MessageBridgeConfig;
     readonly rpcClient;
+    private config: MessageBridgeConfig;
 
     constructor(config: MessageBridgeConfig) {
         this.config = config;
@@ -27,56 +26,27 @@ export class MessageBridge {
         console.log(`[MB] Sender Account: ${config.account.address}`);
     }
 
-    // region version
+    // region contract info
     async version(): Promise<string> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.version.name);
+        return await this.getStringValue(this.version.name);
+    }
 
-        const versionValue = result.stack[0].value;
-        if (versionValue === undefined || versionValue === null) {
-            throw new ContractInvocationError('Invalid version value returned from contract');
-        }
-
-        if (typeof versionValue === 'string') {
-            let hexString = neonAdapter.utils.base642hex(versionValue);
-            return neonAdapter.utils.hexstring2str(hexString);
-        } else {
-            return String(versionValue);
-        }
+    async linkedChainId(): Promise<number> {
+        return await this.getNumberValue(this.linkedChainId.name);
     }
     // endregion
 
     // region pause
     async isPaused(): Promise<boolean> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.isPaused.name);
-
-        const pausedValue = result.stack[0].value;
-        if (pausedValue === undefined || pausedValue === null) {
-            throw new ContractInvocationError('Invalid isPaused value returned from contract');
-        }
-
-        return Boolean(pausedValue);
+        return await this.getBooleanValue(this.isPaused.name);
     }
 
     async sendingIsPaused(): Promise<boolean> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingIsPaused.name);
-
-        const pausedValue = result.stack[0].value;
-        if (pausedValue === undefined || pausedValue === null) {
-            throw new ContractInvocationError('Invalid sendingIsPaused value returned from contract');
-        }
-
-        return Boolean(pausedValue);
+        return await this.getBooleanValue(this.sendingIsPaused.name);
     }
 
     async executingIsPaused(): Promise<boolean> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.executingIsPaused.name);
-
-        const pausedValue = result.stack[0].value;
-        if (pausedValue === undefined || pausedValue === null) {
-            throw new ContractInvocationError('Invalid executingIsPaused value returned from contract');
-        }
-
-        return Boolean(pausedValue);
+        return await this.getBooleanValue(this.executingIsPaused.name);
     }
 
     async pause(): Promise<TransactionResult> {
@@ -144,6 +114,31 @@ export class MessageBridge {
             []
         );
     }
+
+    // endregion
+
+    // region fees
+    async sendingFee(): Promise<number> {
+        return await this.getNumberValue(this.sendingFee.name);
+    }
+
+    async unclaimedFees(): Promise<number> {
+        return await this.getNumberValue(this.unclaimedFees.name);
+    }
+    // endregion
+
+    // region contracts
+    async management(): Promise<string> {
+        return await this.getHexValue(this.management.name);
+    }
+
+    async getMessageBridge(): Promise<string> {
+        return await this.getStringValue(this.getMessageBridge.name);
+    }
+
+    async executionManager(): Promise<string> {
+        return await this.getHexValue(this.executionManager.name);
+    }
     // endregion
 
     // region send messages
@@ -210,54 +205,7 @@ export class MessageBridge {
     }
     // endregion
 
-    async sendingFee(): Promise<number> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.sendingFee.name);
-
-        const feeValue = result.stack[0].value;
-        if (feeValue === undefined || feeValue === null) {
-            throw new ContractInvocationError('Invalid sending fee value returned from contract');
-        }
-
-        return Number(feeValue);
-    }
-
-    async management(): Promise<string> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.management.name);
-
-        const managementValue = result.stack[0].value;
-        if (managementValue === undefined || managementValue === null) {
-            throw new ContractInvocationError('Invalid management value returned from contract');
-        }
-
-        if (typeof managementValue === 'string') {
-            return `0x${neonAdapter.utils.base642hex(managementValue)}`;
-        } else {
-            return String(managementValue);
-        }
-    }
-
-    async unclaimedFees(): Promise<number> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.unclaimedFees.name);
-
-        const unclaimedFeesValue = result.stack[0].value;
-        if (unclaimedFeesValue === undefined || unclaimedFeesValue === null) {
-            throw new ContractInvocationError('Invalid unclaimedFees value returned from contract');
-        }
-
-        return Number(unclaimedFeesValue);
-    }
-
-    async linkedChainId(): Promise<number> {
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.linkedChainId.name);
-
-        const linkedChainIdValue = result.stack[0].value;
-        if (linkedChainIdValue === undefined || linkedChainIdValue === null) {
-            throw new ContractInvocationError('Invalid linkedChainId value returned from contract');
-        }
-
-        return Number(linkedChainIdValue);
-    }
-
+    // region utils
     async serializeCall(target: string, method: string, callFlags: number, args: ContractParamJson[]): Promise<string> {
         const params = [
             neonAdapter.create.contractParam('Hash160', target.startsWith('0x') ? target.slice(2) : target),
@@ -266,18 +214,113 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Array', args)
         ];
 
-        const result = await invokeMethod(this.rpcClient, this.config.contractHash, this.serializeCall.name, params);
+        return await this.getHexValue(this.serializeCall.name, params);
+    }
+    // endregion
 
-        const serializedValue = result.stack[0].value;
-        if (serializedValue === undefined || serializedValue === null) {
-            throw new ContractInvocationError('Invalid serializeCall value returned from contract');
-        }
+    // region execute
+    async executeMessage(nonce: number): Promise<TransactionResult> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', nonce)
+        ];
 
-        if (typeof serializedValue === 'string') {
-            return `0x${neonAdapter.utils.base642hex(serializedValue)}`;
+        return await sendContractTransaction(
+            this.rpcClient,
+            this.config.account,
+            this.config.contractHash,
+            this.executeMessage.name,
+            params,
+            [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
+        );
+    }
+    // endregion
+
+    // region getters
+    async getMessage(nonce: number): Promise<any> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', nonce)
+        ];
+
+        return await this.getStringValue(this.getMessage.name, params);
+    }
+
+    async getMetadata(nonce: number): Promise<any> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', nonce)
+        ];
+
+        await this.getStringValue(this.getMetadata.name, params);
+    }
+
+    async getExecutableState(nonce: number): Promise<any> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', nonce)
+        ];
+
+        await this.getStringValue(this.getExecutableState.name, params);
+    }
+
+    async getEvmExecutionResult(relatedNeoToEvmMessageNonce: number): Promise<string> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', relatedNeoToEvmMessageNonce)
+        ];
+
+        return await this.getHexValue(this.getEvmExecutionResult.name, params);
+    }
+    // endregion
+
+    // region states
+    async neoToEvmNonce(): Promise<number> {
+        return await this.getNumberValue(this.neoToEvmNonce.name);
+    }
+
+    async neoToEvmRoot(): Promise<string> {
+        return await this.getHexValue(this.neoToEvmRoot.name);
+    }
+
+    async evmToNeoNonce(): Promise<number> {
+        return await this.getNumberValue(this.evmToNeoNonce.name);
+    }
+
+    async evmToNeoRoot(): Promise<string> {
+        return await this.getHexValue(this.evmToNeoRoot.name);
+    }
+    // endregion
+
+    // region private helpers
+    private async getBooleanValue(methodName: string) {
+        return Boolean(await this.getStackValue(methodName));
+    }
+
+    private async getNumberValue(methodName: string) {
+        return Number(await this.getStackValue(methodName));
+    }
+
+    private async getStringValue(methodName: string, params?: ContractParam[]) {
+        const result = await this.getStackValue(methodName, params);
+
+        if (typeof result === 'string') {
+            let hexString = neonAdapter.utils.base642hex(result);
+            return neonAdapter.utils.hexstring2str(hexString);
         } else {
-            return String(serializedValue);
+            return String(result);
         }
+    }
+
+    private async getHexValue(methodName: string, params?: ContractParam[]) {
+        const result = await this.getStackValue(methodName, params);
+
+        if (typeof result === 'string') {
+            return `0x${neonAdapter.utils.base642hex(result)}`;
+        } else {
+            return String(result);
+        }
+    }
+
+    private async getStackValue(methodName: string, params?: ContractParam[]) {
+        let errorMessage = `Invalid ${methodName} value returned from contract`;
+
+        return await invokeMethod(this.rpcClient, this.config.contractHash, methodName, errorMessage, params || []);
     }
 
     private getValidSponsor() {
@@ -319,4 +362,5 @@ export class MessageBridge {
             return Array.from(bytes);
         }
     }
+    // endregion
 }

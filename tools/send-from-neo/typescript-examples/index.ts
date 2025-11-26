@@ -90,8 +90,14 @@ async function testMessageBridgeOperations() {
             case 'serialize-is-paused':
                 await serializeIsPausedCall(messageBridge);
                 break;
+            case 'execute-message':
+                await executeMessage(messageBridge);
+                break;
             case 'pause-all-test':
                 await testAllPauseOperations(messageBridge);
+                break;
+            case 'none':
+                console.log('No-op selected. Exiting.');
                 break;
             default:
                 console.log('No MESSAGE_OPERATION specified. Available operations:');
@@ -99,6 +105,7 @@ async function testMessageBridgeOperations() {
                 console.log('- result: Send a result message');
                 console.log('- store-only: Send a store-only message');
                 console.log('- serialize-is-paused: Serialize a call to the isPaused method');
+                console.log('- execute-message: Execute a message by nonce');
                 console.log('- pause-test: Test pause/unpause entire contract with state checks');
                 console.log('- pause-sending-test: Test pause/unpause sending operations with state checks');
                 console.log('- pause-executing-test: Test pause/unpause executing operations with state checks');
@@ -150,31 +157,38 @@ async function testReadOnlyMethods(messageBridge: MessageBridge) {
 
         // Test methods that require parameters with example values
         try {
-            const message = await messageBridge.getMessage(1);
+            const message = await messageBridge.getMessage(Number(process.env.MESSAGE_NONCE));
             console.log(`Message (nonce 1):`, message);
         } catch (error) {
-            console.log(`getMessage(1): No message found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getMessage: No message found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
-            const metadata = await messageBridge.getMetadata(1);
+            const metadata = await messageBridge.getMetadata(Number(process.env.MESSAGE_NONCE));
             console.log(`Metadata (nonce 1):`, metadata);
         } catch (error) {
-            console.log(`getMetadata(1): No metadata found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getMetadata: No metadata found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
-            const executableState = await messageBridge.getExecutableState(1);
+            const executableState = await messageBridge.getExecutableState(Number(process.env.MESSAGE_NONCE));
             console.log(`Executable State (nonce 1):`, executableState);
         } catch (error) {
-            console.log(`getExecutableState(1): No state found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getExecutableState: No state found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
-            const evmExecutionResult = await messageBridge.getEvmExecutionResult(1);
+            const evmExecutionResult = await messageBridge.getEvmExecutionResult(Number(process.env.MESSAGE_NONCE));
             console.log(`EVM Execution Result (nonce 1): ${evmExecutionResult}`);
         } catch (error) {
-            console.log(`getEvmExecutionResult(1): No result found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getEvmExecutionResult: No result found or error - ${error instanceof Error ? error.message : error}`);
+        }
+
+        try {
+            const neoExecutionResult = await messageBridge.getNeoExecutionResult(Number(process.env.MESSAGE_NONCE));
+            console.log(`Neo Execution Result (nonce 1): ${neoExecutionResult}`);
+        } catch (error) {
+            console.log(`getNeoExecutionResult: No result found or error - ${error instanceof Error ? error.message : error}`);
         }
 
     } catch (error) {
@@ -252,6 +266,27 @@ async function serializeIsPausedCall(messageBridge: MessageBridge) {
         console.log(serializedCall);
     } catch (error) {
         console.error('Failed to serialize isPaused call:', error instanceof Error ? error.message : error);
+    }
+}
+
+async function executeMessage(messageBridge: MessageBridge) {
+    const nonce = process.env.MESSAGE_NONCE;
+    if (!nonce) {
+        throw new Error('MESSAGE_NONCE environment variable is required for executing messages');
+    }
+
+    const nonceValue = parseInt(nonce, 10);
+    if (isNaN(nonceValue)) {
+        throw new Error('MESSAGE_NONCE must be a valid integer');
+    }
+
+    try {
+        console.log(`Executing message with nonce: ${nonceValue}`);
+
+        const result = await messageBridge.executeMessage(nonceValue);
+        console.log('Message executed successfully:', result.txHash);
+    } catch (error: any) {
+        console.error('Failed to execute message:', error instanceof Error ? error.message : error);
     }
 }
 
@@ -403,6 +438,7 @@ async function logPauseStates(messageBridge: MessageBridge) {
     // process.env.MESSAGE_STORE_RESULT = "true";
     // process.env.MESSAGE_BRIDGE_OPERATION = "send-store-only";
     // process.env.MESSAGE_STORE_ONLY_DATA = "0xaaaaaaaaaa";
+    process.env.MESSAGE_NONCE = "1";
     process.env.MESSAGE_BRIDGE_OPERATION = "none";
     process.env.WALLET_PATH = "../../neon3-funding/neon3-wallets/governor.json";
     await main();

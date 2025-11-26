@@ -40,7 +40,7 @@ export async function invokeScript(rpcClient: RPCClient, script: HexString, txSi
         txSigners
     );
     if (invokeResp.state !== "HALT") {
-        throw new ContractInvocationError(`Transaction script execution failed`, invokeResp.exception || 'Unknown error');
+        throw new ContractInvocationError(`Transaction script execution failed: ${invokeResp.exception || 'Unknown error'}`);
     }
     return invokeResp;
 }

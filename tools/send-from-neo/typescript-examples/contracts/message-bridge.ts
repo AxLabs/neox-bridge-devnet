@@ -266,6 +266,14 @@ export class MessageBridge {
 
         return await this.getHexValue(this.getEvmExecutionResult.name, params);
     }
+
+    async getNeoExecutionResult(relatedEvmToNeoMessageNonce: number): Promise<string> {
+        const params = [
+            neonAdapter.create.contractParam('Integer', relatedEvmToNeoMessageNonce)
+        ];
+
+        return await this.getHexValue(this.getNeoExecutionResult.name, params);
+    }
     // endregion
 
     // region states
@@ -328,11 +336,6 @@ export class MessageBridge {
     }
 
     private decodeStackItem(item: any, methodName?: string): any {
-        // log the item type for debugging
-        if (methodName) {
-            console.log(`[${methodName}] Decoding StackItem of type: ${item && typeof item === 'object' && 'type' in item ? item.type : 'unknown'}`);
-        }
-
         if (Array.isArray(item)) {
             return item.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
         }

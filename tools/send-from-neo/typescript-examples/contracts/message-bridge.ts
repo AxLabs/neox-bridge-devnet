@@ -1,31 +1,27 @@
-import { ContractParam, neonAdapter } from "../neo/neon-adapter";
+import { neonAdapter } from "../neo/neon-adapter";
 import {
-    InvalidParameterError,
     type ContractWrapperConfig,
-    type SendExecutableMessageParams,
-    type SendResultMessageParams,
-    type SendStoreOnlyMessageParams,
-    type TransactionResult,
-    type State,
+    type ExecutableState,
+    InvalidParameterError,
     type MessageBridgeConfigData,
     type MessageBridgeData,
     type NeoMessage,
     type NeoMetadataUnion,
-    type ExecutableState
+    type SendExecutableMessageParams,
+    type SendResultMessageParams,
+    type SendStoreOnlyMessageParams,
+    type State,
+    type TransactionResult
 } from "../types";
-import { invokeMethod } from "../neo/rpc-utils";
 import { sendContractTransaction } from "../neo/neo-utils";
 import { BasicParams, MessageParams } from "../types/interfaces";
 import { ContractParamJson } from "@cityofzion/neon-core/lib/sc/ContractParam";
+import { AbstractContract } from "./abstract-contract";
 
-export class MessageBridge {
-
-    readonly rpcClient;
-    private config: ContractWrapperConfig;
+export class MessageBridge extends AbstractContract {
 
     constructor(config: ContractWrapperConfig) {
-        this.config = config;
-        this.rpcClient = neonAdapter.create.rpcClient(config.rpcUrl);
+        super(config);
         console.log(`[MB] Initialized MessageBridge with RPC URL: ${config.rpcUrl}`);
         this.rpcClient.getVersion().then(v => console.log(`[MB] Magic Number: ${v.protocol.network}`));
         console.log(`[MB] Contract Hash: ${config.contractHash}`);
@@ -40,6 +36,7 @@ export class MessageBridge {
     async linkedChainId(): Promise<number> {
         return await this.getNumberValue(this.linkedChainId.name);
     }
+
     // endregion
 
     // region pause
@@ -131,6 +128,7 @@ export class MessageBridge {
     async unclaimedFees(): Promise<number> {
         return await this.getNumberValue(this.unclaimedFees.name);
     }
+
     // endregion
 
     // region contracts
@@ -141,10 +139,13 @@ export class MessageBridge {
     async executionManager(): Promise<string> {
         return await this.getHexValue(this.executionManager.name);
     }
+
     // endregion
 
     // region send messages
     async sendExecutableMessage(params: SendExecutableMessageParams): Promise<TransactionResult> {
+        this.validateMessageParams(params, this.sendExecutableMessage.name);
+
         let feeSponsor = this.getValidSponsor();
         const maxFee = this.getValidMaxFee(params);
         let rawMessage = this.getValidRawMessage(params);
@@ -167,6 +168,8 @@ export class MessageBridge {
     }
 
     async sendResultMessage(params: SendResultMessageParams): Promise<TransactionResult> {
+        this.validateResultMessageParams(params, this.sendResultMessage.name);
+
         let feeSponsor = this.getValidSponsor();
         const maxFee = this.getValidMaxFee(params);
         const args = [
@@ -186,6 +189,8 @@ export class MessageBridge {
     }
 
     async sendStoreOnlyMessage(params: SendStoreOnlyMessageParams): Promise<TransactionResult> {
+        this.validateMessageParams(params, this.sendStoreOnlyMessage.name);
+
         let feeSponsor = this.getValidSponsor();
         const maxFee = this.getValidMaxFee(params);
         let rawMessage = this.getValidRawMessage(params);
@@ -205,10 +210,18 @@ export class MessageBridge {
             [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
         );
     }
+
     // endregion
 
     // region utils
     async serializeCall(target: string, method: string, callFlags: number, args: ContractParamJson[]): Promise<string> {
+        this.validateScriptHash(target, this.serializeCall.name);
+        this.validateCallFlags(callFlags, this.serializeCall.name);
+
+        if (!Array.isArray(args)) {
+            throw new InvalidParameterError('args for serializeCall', `array value, got ${typeof args}`);
+        }
+
         const params = [
             neonAdapter.create.contractParam('Hash160', target.startsWith('0x') ? target.slice(2) : target),
             neonAdapter.create.contractParam('String', method),
@@ -218,10 +231,50 @@ export class MessageBridge {
 
         return await this.getHexValue(this.serializeCall.name, params);
     }
+
+    async getMessageBridge(): Promise<MessageBridgeData> {
+        const rawData = await this.getObjectValue(this.getMessageBridge.name);
+
+        if (!Array.isArray(rawData) || rawData.length !== 3) {
+            throw new Error('Invalid MessageBridge data structure received');
+        }
+
+        const [evmToNeoData, neoToEvmData, configData] = rawData;
+
+        // Map evmToNeoState
+        const evmToNeoState: State = {
+            nonce: typeof evmToNeoData[0] === 'number' ? evmToNeoData[0] : Number(evmToNeoData[0]),
+            root: typeof evmToNeoData[1] === 'string' ? evmToNeoData[1] : String(evmToNeoData[1])
+        };
+
+        // Map neoToEvmState
+        const neoToEvmState: State = {
+            nonce: typeof neoToEvmData[0] === 'number' ? neoToEvmData[0] : Number(neoToEvmData[0]),
+            root: typeof neoToEvmData[1] === 'string' ? neoToEvmData[1] : String(neoToEvmData[1])
+        };
+
+        // Map config
+        const config: MessageBridgeConfigData = {
+            sendingFee: typeof configData[0] === 'number' ? configData[0] : Number(configData[0]),
+            maxMessageSize: typeof configData[1] === 'number' ? configData[1] : Number(configData[1]),
+            maxNrMessages: typeof configData[2] === 'number' ? configData[2] : Number(configData[2]),
+            executionManager: typeof configData[3] === 'string' ? configData[3] : String(configData[3]),
+            executionWindowMilliseconds: typeof configData[4] === 'number' ? configData[4] : Number(configData[4])
+        };
+
+        return {
+            evmToNeoState,
+            neoToEvmState,
+            config
+        };
+    }
+
     // endregion
 
     // region execute
     async executeMessage(nonce: number): Promise<TransactionResult> {
+        this.validateUint(nonce, this.executeMessage.name);
+
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
@@ -235,10 +288,13 @@ export class MessageBridge {
             [neonAdapter.constants.NATIVE_CONTRACT_HASH.GasToken]
         );
     }
+
     // endregion
 
     // region getters
     async getMessage(nonce: number): Promise<NeoMessage> {
+        this.validateUint(nonce, this.getMessage.name);
+
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
@@ -257,6 +313,8 @@ export class MessageBridge {
     }
 
     async getMetadata(nonce: number): Promise<NeoMetadataUnion> {
+        this.validateUint(nonce, this.getMetadata.name);
+
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
@@ -314,6 +372,8 @@ export class MessageBridge {
     }
 
     async getExecutableState(nonce: number): Promise<ExecutableState> {
+        this.validateUint(nonce, 'getExecutableState');
+
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
@@ -333,6 +393,8 @@ export class MessageBridge {
     }
 
     async getEvmExecutionResult(relatedNeoToEvmMessageNonce: number): Promise<string> {
+        this.validateUint(relatedNeoToEvmMessageNonce, this.getEvmExecutionResult.name);
+
         const params = [
             neonAdapter.create.contractParam('Integer', relatedNeoToEvmMessageNonce)
         ];
@@ -341,6 +403,8 @@ export class MessageBridge {
     }
 
     async getNeoExecutionResult(relatedEvmToNeoMessageNonce: number): Promise<string> {
+        this.validateUint(relatedEvmToNeoMessageNonce, this.getNeoExecutionResult.name);
+
         const params = [
             neonAdapter.create.contractParam('Integer', relatedEvmToNeoMessageNonce)
         ];
@@ -348,42 +412,6 @@ export class MessageBridge {
         return await this.getHexValue(this.getNeoExecutionResult.name, params);
     }
 
-    async getMessageBridge(): Promise<MessageBridgeData> {
-        const rawData = await this.getObjectValue(this.getMessageBridge.name);
-
-        if (!Array.isArray(rawData) || rawData.length !== 3) {
-            throw new Error('Invalid MessageBridge data structure received');
-        }
-
-        const [evmToNeoData, neoToEvmData, configData] = rawData;
-
-        // Map evmToNeoState
-        const evmToNeoState: State = {
-            nonce: typeof evmToNeoData[0] === 'number' ? evmToNeoData[0] : Number(evmToNeoData[0]),
-            root: typeof evmToNeoData[1] === 'string' ? evmToNeoData[1] : String(evmToNeoData[1])
-        };
-
-        // Map neoToEvmState
-        const neoToEvmState: State = {
-            nonce: typeof neoToEvmData[0] === 'number' ? neoToEvmData[0] : Number(neoToEvmData[0]),
-            root: typeof neoToEvmData[1] === 'string' ? neoToEvmData[1] : String(neoToEvmData[1])
-        };
-
-        // Map config
-        const config: MessageBridgeConfigData = {
-            sendingFee: typeof configData[0] === 'number' ? configData[0] : Number(configData[0]),
-            maxMessageSize: typeof configData[1] === 'number' ? configData[1] : Number(configData[1]),
-            maxNrMessages: typeof configData[2] === 'number' ? configData[2] : Number(configData[2]),
-            executionManager: typeof configData[3] === 'string' ? configData[3] : String(configData[3]),
-            executionWindowMilliseconds: typeof configData[4] === 'number' ? configData[4] : Number(configData[4])
-        };
-
-        return {
-            evmToNeoState,
-            neoToEvmState,
-            config
-        };
-    }
     // endregion
 
     // region states
@@ -404,113 +432,54 @@ export class MessageBridge {
     }
     // endregion
 
-    // region private helpers
-    private async getBooleanValue(methodName: string) {
-        return Boolean(await this.getStackValue(methodName));
-    }
-
-    private async getNumberValue(methodName: string) {
-        return Number(await this.getStackValue(methodName));
-    }
-
-    private async getStringValue(methodName: string, params?: ContractParam[]) {
-        const result = await this.getStackValue(methodName, params);
-
-        if (typeof result === 'string') {
-            let hexString = neonAdapter.utils.base642hex(result);
-            return neonAdapter.utils.hexstring2str(hexString);
-        } else {
-            return String(result);
-        }
-    }
-
-    private async getHexValue(methodName: string, params?: ContractParam[]) {
-        const result = await this.getStackValue(methodName, params);
-
-        if (typeof result === 'string') {
-            return `0x${neonAdapter.utils.base642hex(result)}`;
-        } else {
-            return String(result);
-        }
-    }
-
-    private async getObjectValue(methodName: string, params?: ContractParam[]) {
-        const result = await this.getStackValue(methodName, params);
-
-        // If it's an array of StackItemJson objects, decode each one
-        if (Array.isArray(result)) {
-            return result.map(item => this.decodeStackItem(item, methodName));
+    // region parameter validation
+    private validateMessageParams(params: SendExecutableMessageParams | SendStoreOnlyMessageParams, methodName: string): void {
+        if (!params) {
+            throw new InvalidParameterError(`params for ${methodName}`, `non-null object`);
         }
 
-        return this.decodeStackItem(result, methodName);
-    }
+        this.validateUint(params.maxFee, "maxFee");
 
-    private decodeStackItem(item: any, methodName?: string): any {
-        if (Array.isArray(item)) {
-            return item.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
+        if (!params.messageData) {
+            throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty value`);
         }
 
-        if (item && typeof item === 'object' && 'type' in item && 'value' in item) {
-            const { type, value } = item;
-
-            // Handle different types
-            switch (type) {
-                case 'Array':
-                    // Recursively decode array elements
-                    if (Array.isArray(value)) {
-                        return value.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
-                    }
-                    return value;
-                case 'ByteString':
-                case 'Buffer':
-                case 'Pointer':
-                    if (typeof value === 'string') {
-                        // Convert base64 to hex
-                        try {
-                            return `0x${neonAdapter.utils.base642hex(value)}`;
-                        } catch {
-                            return value;
-                        }
-                    }
-                    return value;
-                case 'Integer':
-                    return Number(value);
-                case 'Boolean':
-                    return Boolean(value);
-                case 'Null':
-                    return null;
-                default:
-                    return value;
+        if (typeof params.messageData === 'string') {
+            const hexPattern = /^(0x)?[0-9a-fA-F]+$/;
+            if (!hexPattern.test(params.messageData) && params.messageData.trim().length === 0) {
+                throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty hex string or UTF-8 string`);
             }
+        } else if (Array.isArray(params.messageData)) {
+            if (params.messageData.length === 0) {
+                throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty byte array`);
+            }
+            if (!params.messageData.every(b => Number.isInteger(b) && b >= 0 && b <= 255)) {
+                throw new InvalidParameterError(`messageData for ${methodName}`, `array of bytes (0-255)`);
+            }
+        } else {
+            throw new InvalidParameterError(`messageData for ${methodName}`, `string or byte array, got ${typeof params.messageData}`);
+        }
+    }
+
+    private validateResultMessageParams(params: SendResultMessageParams, methodName: string): void {
+        if (!params) {
+            throw new InvalidParameterError(`params for ${methodName}`, `non-null object`);
         }
 
-        return item;
+        this.validateUint(params.nonce, methodName);
     }
 
-
-    private async getStackValue(methodName: string, params?: ContractParam[]) {
-        let errorMessage = `Invalid ${methodName} value returned from contract`;
-
-        return await invokeMethod(this.rpcClient, this.config.contractHash, methodName, errorMessage, params || []);
+    private getValidSponsor(): string {
+        this.validateScriptHash(this.config.account.scriptHash, 'feeSponsor');
+        return this.config.account.scriptHash;
     }
 
-    private getValidSponsor() {
-        let feeSponsor = this.config.account.scriptHash;
-        if (feeSponsor.startsWith('0x')) feeSponsor = feeSponsor.slice(2);
-        if (feeSponsor.length !== 40) {
-            throw new InvalidParameterError(`feeSponsor`, `40 hex chars`);
-        }
-        return feeSponsor;
+    private getValidMaxFee(params: BasicParams): number {
+        this.validateUint(params.maxFee, "maxFee");
+        return params.maxFee;
     }
 
-    private getValidMaxFee(params: BasicParams) {
-        if (params.sendingFee === undefined || params.sendingFee === null) {
-            throw new InvalidParameterError("sendingFee");
-        }
-        return params.sendingFee;
-    }
-
-    private getValidRawMessage(params: MessageParams) {
+    private getValidRawMessage(params: MessageParams): string {
         let messageData = this.messageToBytes(params.messageData);
         return neonAdapter.utils.ab2hexstring(new Uint8Array(messageData));
     }
@@ -533,5 +502,6 @@ export class MessageBridge {
             return Array.from(bytes);
         }
     }
+
     // endregion
 }

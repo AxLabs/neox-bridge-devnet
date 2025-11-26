@@ -11,7 +11,7 @@ export interface TransactionResult {
 }
 
 export interface BasicParams {
-    sendingFee: number;
+    maxFee: number;
 }
 
 export interface SendResultMessageParams extends BasicParams {

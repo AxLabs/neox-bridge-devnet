@@ -229,7 +229,7 @@ async function sendExecutableMessage(messageBridge: MessageBridge) {
     const params: SendExecutableMessageParams = {
         messageData,
         storeResult,
-        sendingFee
+        maxFee: sendingFee
     };
 
     const result = await messageBridge.sendExecutableMessage(params);
@@ -246,7 +246,7 @@ async function sendResultMessage(messageBridge: MessageBridge) {
 
     const params: SendResultMessageParams = {
         nonce: parseInt(nonce, 10),
-        sendingFee: sendingFee
+        maxFee: sendingFee
     };
 
     const result = await messageBridge.sendResultMessage(params);
@@ -263,7 +263,7 @@ async function sendStoreOnlyMessage(messageBridge: MessageBridge) {
 
     const params: SendStoreOnlyMessageParams = {
         messageData,
-        sendingFee: sendingFee
+        maxFee: sendingFee
     };
 
     const result = await messageBridge.sendStoreOnlyMessage(params);
@@ -379,7 +379,8 @@ async function testAllPauseOperations(messageBridge: MessageBridge) {
     console.log("\n--- Testing All Pause/Unpause Operations ---");
 
     // Get block time estimate if available from the rpcClient
-    const version = await messageBridge.rpcClient.getVersion();
+    const config = messageBridge.getConfig();
+    const version = await neonAdapter.create.rpcClient(config.rpcUrl).getVersion();
     const waitInterval = version.protocol.msperblock;
 
     try {

@@ -1,11 +1,17 @@
 import { ContractParam, neonAdapter } from "../neo/neon-adapter";
 import {
     InvalidParameterError,
-    type MessageBridgeConfig,
+    type ContractWrapperConfig,
     type SendExecutableMessageParams,
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams,
-    type TransactionResult
+    type TransactionResult,
+    type State,
+    type MessageBridgeConfigData,
+    type MessageBridgeData,
+    type NeoMessage,
+    type NeoMetadataUnion,
+    type ExecutableState
 } from "../types";
 import { invokeMethod } from "../neo/rpc-utils";
 import { sendContractTransaction } from "../neo/neo-utils";
@@ -15,9 +21,9 @@ import { ContractParamJson } from "@cityofzion/neon-core/lib/sc/ContractParam";
 export class MessageBridge {
 
     readonly rpcClient;
-    private config: MessageBridgeConfig;
+    private config: ContractWrapperConfig;
 
-    constructor(config: MessageBridgeConfig) {
+    constructor(config: ContractWrapperConfig) {
         this.config = config;
         this.rpcClient = neonAdapter.create.rpcClient(config.rpcUrl);
         console.log(`[MB] Initialized MessageBridge with RPC URL: ${config.rpcUrl}`);
@@ -132,10 +138,6 @@ export class MessageBridge {
         return await this.getHexValue(this.management.name);
     }
 
-    async getMessageBridge(): Promise<any> {
-        return await this.getObjectValue(this.getMessageBridge.name);
-    }
-
     async executionManager(): Promise<string> {
         return await this.getHexValue(this.executionManager.name);
     }
@@ -236,27 +238,98 @@ export class MessageBridge {
     // endregion
 
     // region getters
-    async getMessage(nonce: number): Promise<any> {
+    async getMessage(nonce: number): Promise<NeoMessage> {
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
-        return await this.getObjectValue(this.getMessage.name, params);
+        const rawData = await this.getObjectValue(this.getMessage.name, params);
+
+        if (!Array.isArray(rawData) || rawData.length !== 2) {
+            throw new Error('Invalid NeoMessage data structure received');
+        }
+
+        const [metadataBytes, rawMessage] = rawData;
+
+        return {
+            metadataBytes: typeof metadataBytes === 'string' ? metadataBytes : String(metadataBytes),
+            rawMessage: typeof rawMessage === 'string' ? rawMessage : String(rawMessage)
+        };
     }
 
-    async getMetadata(nonce: number): Promise<any> {
+    async getMetadata(nonce: number): Promise<NeoMetadataUnion> {
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
 
-        return await this.getObjectValue(this.getMetadata.name, params);
+        const rawData = await this.getObjectValue(this.getMetadata.name, params);
+
+        if (!Array.isArray(rawData) || rawData.length < 3) {
+            throw new Error('Invalid metadata data structure received');
+        }
+
+        const type = typeof rawData[0] === 'number' ? rawData[0] : Number(rawData[0]);
+        const timestamp = typeof rawData[1] === 'number' ? rawData[1] : Number(rawData[1]);
+        const sender = typeof rawData[2] === 'string' ? rawData[2] : String(rawData[2]);
+
+        // Base metadata properties
+        const baseMetadata = {
+            type,
+            timestamp,
+            sender
+        };
+
+        // Type-specific mapping based on the type field
+        switch (type) {
+            case 0: // MESSAGE_TYPE_EXECUTABLE
+                if (rawData.length < 4) {
+                    throw new Error('Invalid executable metadata structure received');
+                }
+                const storeResult = typeof rawData[3] === 'boolean' ? rawData[3] : Boolean(rawData[3]);
+                return {
+                    ...baseMetadata,
+                    type: 0 as const,
+                    storeResult
+                };
+
+            case 1: // MESSAGE_TYPE_STORE_ONLY
+                return {
+                    ...baseMetadata,
+                    type: 1 as const
+                };
+
+            case 2: // MESSAGE_TYPE_RESULT
+                if (rawData.length < 4) {
+                    throw new Error('Invalid result metadata structure received');
+                }
+                const initialMessageNonce = typeof rawData[3] === 'number' ? rawData[3] : Number(rawData[3]);
+                return {
+                    ...baseMetadata,
+                    type: 2 as const,
+                    initialMessageNonce
+                };
+
+            default:
+                throw new Error(`Unknown metadata type: ${type}`);
+        }
     }
 
-    async getExecutableState(nonce: number): Promise<any> {
+    async getExecutableState(nonce: number): Promise<ExecutableState> {
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
 
-        return await this.getObjectValue(this.getExecutableState.name, params);
+        const rawData = await this.getObjectValue(this.getExecutableState.name, params);
+
+        if (!Array.isArray(rawData) || rawData.length !== 2) {
+            throw new Error('Invalid ExecutableState data structure received');
+        }
+
+        const [executed, expirationTime] = rawData;
+
+        return {
+            executed: typeof executed === 'boolean' ? executed : Boolean(executed),
+            expirationTime: typeof expirationTime === 'number' ? expirationTime : Number(expirationTime)
+        };
     }
 
     async getEvmExecutionResult(relatedNeoToEvmMessageNonce: number): Promise<string> {
@@ -273,6 +346,43 @@ export class MessageBridge {
         ];
 
         return await this.getHexValue(this.getNeoExecutionResult.name, params);
+    }
+
+    async getMessageBridge(): Promise<MessageBridgeData> {
+        const rawData = await this.getObjectValue(this.getMessageBridge.name);
+
+        if (!Array.isArray(rawData) || rawData.length !== 3) {
+            throw new Error('Invalid MessageBridge data structure received');
+        }
+
+        const [evmToNeoData, neoToEvmData, configData] = rawData;
+
+        // Map evmToNeoState
+        const evmToNeoState: State = {
+            nonce: typeof evmToNeoData[0] === 'number' ? evmToNeoData[0] : Number(evmToNeoData[0]),
+            root: typeof evmToNeoData[1] === 'string' ? evmToNeoData[1] : String(evmToNeoData[1])
+        };
+
+        // Map neoToEvmState
+        const neoToEvmState: State = {
+            nonce: typeof neoToEvmData[0] === 'number' ? neoToEvmData[0] : Number(neoToEvmData[0]),
+            root: typeof neoToEvmData[1] === 'string' ? neoToEvmData[1] : String(neoToEvmData[1])
+        };
+
+        // Map config
+        const config: MessageBridgeConfigData = {
+            sendingFee: typeof configData[0] === 'number' ? configData[0] : Number(configData[0]),
+            maxMessageSize: typeof configData[1] === 'number' ? configData[1] : Number(configData[1]),
+            maxNrMessages: typeof configData[2] === 'number' ? configData[2] : Number(configData[2]),
+            executionManager: typeof configData[3] === 'string' ? configData[3] : String(configData[3]),
+            executionWindowMilliseconds: typeof configData[4] === 'number' ? configData[4] : Number(configData[4])
+        };
+
+        return {
+            evmToNeoState,
+            neoToEvmState,
+            config
+        };
     }
     // endregion
 

@@ -7,8 +7,8 @@ import { neonAdapter } from "./neo/neon-adapter";
 import { MessageBridge } from "./contracts/message-bridge";
 import {
     type Account,
+    type ContractWrapperConfig,
     GenericError,
-    type MessageBridgeConfig,
     type SendExecutableMessageParams,
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams
@@ -16,6 +16,7 @@ import {
 
 const url = process.env.NEO_NODE_URL || "http://localhost:40332";
 
+// region Test Functions
 async function testWalletOperations() {
     console.log("=== Testing Wallet Operations ===");
 
@@ -153,28 +154,47 @@ async function testReadOnlyMethods(messageBridge: MessageBridge) {
         console.log(`EVM to Neo Root: ${evmToNeoRoot}`);
 
         const messageBridgeInfo = await messageBridge.getMessageBridge();
-        console.log(`Message Bridge Info:`, messageBridgeInfo);
+        console.log(`Message Bridge Info:`);
+        console.log(`  EVM to Neo State:`, messageBridgeInfo.evmToNeoState);
+        console.log(`  Neo to EVM State:`, messageBridgeInfo.neoToEvmState);
+        console.log(`  Config:`, messageBridgeInfo.config);
 
         // Test methods that require parameters with example values
+        const testNonce = process.env.MESSAGE_NONCE ? Number(process.env.MESSAGE_NONCE) : 1;
+
         try {
-            const message = await messageBridge.getMessage(Number(process.env.MESSAGE_NONCE));
-            console.log(`Message (nonce 1):`, message);
+            const message = await messageBridge.getMessage(testNonce);
+            console.log(`Message (nonce ${testNonce}):`);
+            console.log(`  Metadata Bytes: ${message.metadataBytes}`);
+            console.log(`  Raw Message: ${message.rawMessage}`);
         } catch (error) {
-            console.log(`getMessage: No message found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getMessage(${testNonce}): No message found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
-            const metadata = await messageBridge.getMetadata(Number(process.env.MESSAGE_NONCE));
-            console.log(`Metadata (nonce 1):`, metadata);
+            const metadata = await messageBridge.getMetadata(testNonce);
+            console.log(`Metadata (nonce ${testNonce}):`);
+            console.log(`  Type: ${metadata.type} (${metadata.type === 0 ? 'EXECUTABLE' : metadata.type === 1 ? 'STORE_ONLY' : 'RESULT'})`);
+            console.log(`  Timestamp: ${metadata.timestamp}`);
+            console.log(`  Sender: ${metadata.sender}`);
+
+            // Type-specific fields
+            if (metadata.type === 0) {
+                console.log(`  Store Result: ${metadata.storeResult}`);
+            } else if (metadata.type === 2) {
+                console.log(`  Initial Message Nonce: ${metadata.initialMessageNonce}`);
+            }
         } catch (error) {
-            console.log(`getMetadata: No metadata found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getMetadata(${testNonce}): No metadata found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
-            const executableState = await messageBridge.getExecutableState(Number(process.env.MESSAGE_NONCE));
-            console.log(`Executable State (nonce 1):`, executableState);
+            const executableState = await messageBridge.getExecutableState(testNonce);
+            console.log(`Executable State (nonce ${testNonce}):`);
+            console.log(`  Executed: ${executableState.executed}`);
+            console.log(`  Expiration Time: ${executableState.expirationTime}`);
         } catch (error) {
-            console.log(`getExecutableState: No state found or error - ${error instanceof Error ? error.message : error}`);
+            console.log(`getExecutableState(${testNonce}): No state found or error - ${error instanceof Error ? error.message : error}`);
         }
 
         try {
@@ -285,18 +305,30 @@ async function executeMessage(messageBridge: MessageBridge) {
 
         const result = await messageBridge.executeMessage(nonceValue);
         console.log('Message executed successfully:', result.txHash);
+        // Wait for state update
+        await waitForStateUpdate();
+        // Get and log the execution result
+        const executionResult = await messageBridge.getEvmExecutionResult(nonceValue);
+        console.log(`Execution result for nonce ${nonceValue}:`, executionResult);
     } catch (error: any) {
         console.error('Failed to execute message:', error instanceof Error ? error.message : error);
     }
 }
 
+// endregion
+
+// region Main Execution
 async function main() {
-    await testWalletOperations();
+    // uncomment to test wallet operations
+    // await testWalletOperations();
 
     await testMessageBridgeOperations();
 
 }
 
+// endregion
+
+// region Helper Functions
 export async function createMessageBridgeFromEnvironment(): Promise<MessageBridge> {
     const contractHash = process.env.MESSAGE_BRIDGE_CONTRACT_HASH;
     if (!contractHash) {
@@ -329,7 +361,7 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
         throw new GenericError('Failed to load account from wallet file', 'ACCOUNT_LOAD_FAILED');
     }
 
-    const config: MessageBridgeConfig = {
+    const config: ContractWrapperConfig = {
         contractHash,
         rpcUrl,
         account
@@ -422,12 +454,13 @@ async function logPauseStates(messageBridge: MessageBridge) {
         console.log(`  General Paused: ${isPaused}`);
         console.log(`  Sending Paused: ${sendingIsPaused}`);
         console.log(`  Executing Paused: ${executingIsPaused}`);
-        return { isPaused, sendingIsPaused, executingIsPaused };
+        return {isPaused, sendingIsPaused, executingIsPaused};
     } catch (error) {
         console.error('  Failed to get pause states:', error instanceof Error ? error.message : error);
     }
 }
 
+// endregion
 
 // --- AUTO-TEST: MessageBridge executable message (match Java example) ---
 (async () => {

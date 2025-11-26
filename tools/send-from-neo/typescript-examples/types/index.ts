@@ -16,6 +16,16 @@ export type {
     SendExecutableMessageParams,
     SendResultMessageParams,
     SendStoreOnlyMessageParams,
-    MessageBridgeConfig,
+    ContractWrapperConfig,
+    State,
+    MessageBridgeConfigData,
+    MessageBridgeData,
+    NeoMessage,
+    NeoMetadata,
+    NeoMetadataExecutable,
+    NeoMetadataStoreOnly,
+    NeoMetadataResult,
+    NeoMetadataUnion,
+    ExecutableState,
     Account
 } from "./interfaces.js";

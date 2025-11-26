@@ -3,7 +3,9 @@ import { ContractInvocationError } from "../types";
 
 type InvokeReturnValue = string | boolean | number | StackItemJson[];
 
-export async function invokeMethod(rpcClient: RPCClient, contractHash: string, method: string, errorMessage: string, args?: unknown[]): Promise<InvokeReturnValue> {
+export async function invokeMethod(
+    rpcClient: RPCClient, contractHash: string, method: string, errorMessage: string, args?: unknown[]
+): Promise<InvokeReturnValue> {
     const result = await rpcClient.invokeFunction(
         contractHash,
         method,

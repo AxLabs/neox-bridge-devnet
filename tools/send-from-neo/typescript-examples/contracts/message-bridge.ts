@@ -132,8 +132,8 @@ export class MessageBridge {
         return await this.getHexValue(this.management.name);
     }
 
-    async getMessageBridge(): Promise<string> {
-        return await this.getStringValue(this.getMessageBridge.name);
+    async getMessageBridge(): Promise<any> {
+        return await this.getObjectValue(this.getMessageBridge.name);
     }
 
     async executionManager(): Promise<string> {
@@ -240,8 +240,7 @@ export class MessageBridge {
         const params = [
             neonAdapter.create.contractParam('Integer', nonce)
         ];
-
-        return await this.getStringValue(this.getMessage.name, params);
+        return await this.getObjectValue(this.getMessage.name, params);
     }
 
     async getMetadata(nonce: number): Promise<any> {
@@ -249,7 +248,7 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Integer', nonce)
         ];
 
-        await this.getStringValue(this.getMetadata.name, params);
+        return await this.getObjectValue(this.getMetadata.name, params);
     }
 
     async getExecutableState(nonce: number): Promise<any> {
@@ -257,7 +256,7 @@ export class MessageBridge {
             neonAdapter.create.contractParam('Integer', nonce)
         ];
 
-        await this.getStringValue(this.getExecutableState.name, params);
+        return await this.getObjectValue(this.getExecutableState.name, params);
     }
 
     async getEvmExecutionResult(relatedNeoToEvmMessageNonce: number): Promise<string> {
@@ -316,6 +315,65 @@ export class MessageBridge {
             return String(result);
         }
     }
+
+    private async getObjectValue(methodName: string, params?: ContractParam[]) {
+        const result = await this.getStackValue(methodName, params);
+
+        // If it's an array of StackItemJson objects, decode each one
+        if (Array.isArray(result)) {
+            return result.map(item => this.decodeStackItem(item, methodName));
+        }
+
+        return this.decodeStackItem(result, methodName);
+    }
+
+    private decodeStackItem(item: any, methodName?: string): any {
+        // log the item type for debugging
+        if (methodName) {
+            console.log(`[${methodName}] Decoding StackItem of type: ${item && typeof item === 'object' && 'type' in item ? item.type : 'unknown'}`);
+        }
+
+        if (Array.isArray(item)) {
+            return item.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
+        }
+
+        if (item && typeof item === 'object' && 'type' in item && 'value' in item) {
+            const { type, value } = item;
+
+            // Handle different types
+            switch (type) {
+                case 'Array':
+                    // Recursively decode array elements
+                    if (Array.isArray(value)) {
+                        return value.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
+                    }
+                    return value;
+                case 'ByteString':
+                case 'Buffer':
+                case 'Pointer':
+                    if (typeof value === 'string') {
+                        // Convert base64 to hex
+                        try {
+                            return `0x${neonAdapter.utils.base642hex(value)}`;
+                        } catch {
+                            return value;
+                        }
+                    }
+                    return value;
+                case 'Integer':
+                    return Number(value);
+                case 'Boolean':
+                    return Boolean(value);
+                case 'Null':
+                    return null;
+                default:
+                    return value;
+            }
+        }
+
+        return item;
+    }
+
 
     private async getStackValue(methodName: string, params?: ContractParam[]) {
         let errorMessage = `Invalid ${methodName} value returned from contract`;

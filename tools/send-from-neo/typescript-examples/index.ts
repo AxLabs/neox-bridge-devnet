@@ -41,6 +41,7 @@ async function testWalletOperations() {
                 console.log(`Is valid address: ${neonAdapter.is.address(walletInstance.accounts[0].address)}`);
             }
 
+            // Password can be set to "" because devnet wallets have empty passwords
             if (walletPassword || walletPassword === "") {
                 const account = await createDecryptedAccountFromWalletFile(walletPath, walletPassword);
                 if (account) {
@@ -349,7 +350,7 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     } else {
         account = createAccountFromWalletFile(walletPath);
 
-        if (account && account.tryGet("encrypted")) {
+        if (account && (account.tryGet("encrypted") || account.tryGet("WIF"))) {
             throw new GenericError(
                 'Wallet contains encrypted private key but no WALLET_PASSWORD environment variable provided. Please set WALLET_PASSWORD to decrypt the wallet.',
                 'ENCRYPTED_WALLET_NO_PASSWORD'

@@ -1,6 +1,16 @@
-import { ContractParam, neonAdapter } from "../neo/neon-adapter";
+import { ContractParam, neonAdapter, type StackItemJson } from "../neo/neon-adapter";
 import { type ContractWrapperConfig, InvalidParameterError } from "../types";
 import { invokeMethod } from "../neo/rpc-utils";
+
+// Define types for stack item values and decoded results
+type StackItemValue = string | number | boolean | null | StackItemJson[];
+type DecodedStackItem =
+    string
+    | number
+    | boolean
+    | null
+    | StackItemJson
+    | DecodedStackItem[];
 
 export abstract class AbstractContract {
     protected readonly rpcClient;
@@ -45,7 +55,7 @@ export abstract class AbstractContract {
         }
     }
 
-    protected async getObjectValue(methodName: string, params?: ContractParam[]): Promise<any> {
+    protected async getObjectValue(methodName: string, params?: ContractParam[]): Promise<DecodedStackItem> {
         const result = await this.getStackValue(methodName, params);
 
         if (Array.isArray(result)) {
@@ -55,20 +65,20 @@ export abstract class AbstractContract {
         return this.decodeStackItem(result, methodName);
     }
 
-    protected decodeStackItem(item: any, methodName?: string): any {
+    protected decodeStackItem(item: StackItemValue | StackItemJson, methodName?: string): DecodedStackItem {
         if (Array.isArray(item)) {
             return item.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
         }
 
         if (item && typeof item === 'object' && 'type' in item && 'value' in item) {
-            const { type, value } = item;
+            const {type, value} = item;
 
             switch (type) {
                 case 'Array':
                     if (Array.isArray(value)) {
                         return value.map(nestedItem => this.decodeStackItem(nestedItem, methodName));
                     }
-                    return value;
+                    return value as DecodedStackItem;
                 case 'ByteString':
                 case 'Buffer':
                 case 'Pointer':
@@ -79,25 +89,24 @@ export abstract class AbstractContract {
                             return value;
                         }
                     }
-                    return value;
+                    return value as DecodedStackItem;
                 case 'Integer':
                     return Number(value);
                 case 'Boolean':
                     return Boolean(value);
-                case 'Null':
-                    return null;
                 default:
-                    return value;
+                    return value as DecodedStackItem;
             }
         }
 
-        return item;
+        return item as DecodedStackItem;
     }
 
-    protected async getStackValue(methodName: string, params: ContractParam[] = []): Promise<any> {
+    protected async getStackValue(methodName: string, params: ContractParam[] = []): Promise<StackItemValue> {
         let errorMessage = `Invalid ${methodName} value returned from contract`;
         return await invokeMethod(this.rpcClient, this.config.contractHash, methodName, errorMessage, params);
     }
+
     // endregion
 
     // region parameter validators
@@ -128,5 +137,6 @@ export abstract class AbstractContract {
             throw new InvalidParameterError(`call flags for ${context}`, `value between 0 and 255, got ${callFlags}`);
         }
     }
+
     // endregion
 }

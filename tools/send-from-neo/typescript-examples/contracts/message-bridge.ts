@@ -239,21 +239,30 @@ export class MessageBridge extends AbstractContract {
             throw new Error('Invalid MessageBridge data structure received');
         }
 
-        const [evmToNeoData, neoToEvmData, configData] = rawData;
+        const [evmToNeoData, neoToEvmData, configData] = rawData as [unknown[], unknown[], unknown[]];
 
         // Map evmToNeoState
+        if (!Array.isArray(evmToNeoData) || evmToNeoData.length < 2) {
+            throw new Error('Invalid evmToNeoData structure received');
+        }
         const evmToNeoState: State = {
             nonce: typeof evmToNeoData[0] === 'number' ? evmToNeoData[0] : Number(evmToNeoData[0]),
             root: typeof evmToNeoData[1] === 'string' ? evmToNeoData[1] : String(evmToNeoData[1])
         };
 
         // Map neoToEvmState
+        if (!Array.isArray(neoToEvmData) || neoToEvmData.length < 2) {
+            throw new Error('Invalid neoToEvmData structure received');
+        }
         const neoToEvmState: State = {
             nonce: typeof neoToEvmData[0] === 'number' ? neoToEvmData[0] : Number(neoToEvmData[0]),
             root: typeof neoToEvmData[1] === 'string' ? neoToEvmData[1] : String(neoToEvmData[1])
         };
 
         // Map config
+        if (!Array.isArray(configData) || configData.length < 5) {
+            throw new Error('Invalid configData structure received');
+        }
         const config: MessageBridgeConfigData = {
             sendingFee: typeof configData[0] === 'number' ? configData[0] : Number(configData[0]),
             maxMessageSize: typeof configData[1] === 'number' ? configData[1] : Number(configData[1]),
@@ -430,6 +439,7 @@ export class MessageBridge extends AbstractContract {
     async evmToNeoRoot(): Promise<string> {
         return await this.getHexValue(this.evmToNeoRoot.name);
     }
+
     // endregion
 
     // region parameter validation
@@ -445,10 +455,11 @@ export class MessageBridge extends AbstractContract {
         }
 
         if (typeof params.messageData === 'string') {
-            const hexPattern = /^(0x)?[0-9a-fA-F]+$/;
-            if (!hexPattern.test(params.messageData) && params.messageData.trim().length === 0) {
-                throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty hex string or UTF-8 string`);
+            // First check if string is empty after trimming
+            if (params.messageData.trim().length === 0) {
+                throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty string`);
             }
+
         } else if (Array.isArray(params.messageData)) {
             if (params.messageData.length === 0) {
                 throw new InvalidParameterError(`messageData for ${methodName}`, `non-empty byte array`);

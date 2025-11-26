@@ -41,7 +41,7 @@ export class InvalidParameterError extends GenericError {
     private static CODE = 'INVALID_PARAMETER';
 
     constructor(public readonly parameterName: string, public readonly expectedType?: string) {
-        let message = `${parameterName} must be provided ${expectedType ? `as ${expectedType}` : ''}.`;
+        let message = `${parameterName} must be provided${expectedType ? ` as ${expectedType}` : ''}.`;
         super(message, InvalidParameterError.CODE);
         this.name = 'InvalidParameterError';
     }

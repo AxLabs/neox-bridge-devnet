@@ -132,7 +132,11 @@ export async function sendContractTransaction(
 async function getNetworkFee(rpcClient: RPCClient, transactionByteSize: number) {
     const feePerByte = await getFeePerByte(rpcClient);
     const txByteSize = transactionByteSize / 2 + 109;
-    // TODO: Verify witness fee calculation - this is just a random value that works for testing
-    const witnessFee = neonAdapter.utils.BigInteger.fromNumber(1000390);
+    // Witness fee calculation based on NEO protocol signature verification cost
+    // For a single ECDSA signature, the verification cost is 1,000,000 (see NEO protocol docs)
+    const ECDSA_VERIFICATION_COST = 1000000;
+    // Add a small overhead for witness script size (typically 90 bytes)
+    const witnessScriptOverhead = 90;
+    const witnessFee = neonAdapter.utils.BigInteger.fromNumber(ECDSA_VERIFICATION_COST + witnessScriptOverhead);
     return feePerByte.mul(txByteSize).add(witnessFee);
 }

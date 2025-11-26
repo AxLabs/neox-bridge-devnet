@@ -1,25 +1,22 @@
 import {
-    createAccountFromWalletFile,
-    createDecryptedAccountFromWalletFile,
-    createWalletFromFile
-} from "./wallet/wallet";
-import { neonAdapter } from "./neo/neon-adapter";
-import { MessageBridge } from "./contracts/message-bridge";
-import {
     type Account,
     type ContractWrapperConfig,
+    createAccountFromWalletFile,
+    createDecryptedAccountFromWalletFile,
+    createWalletFromFile,
     GenericError,
+    MessageBridge,
+    neonAdapter,
     type SendExecutableMessageParams,
     type SendResultMessageParams,
     type SendStoreOnlyMessageParams
-} from "./types";
-
-const url = process.env.NEO_NODE_URL || "http://localhost:40332";
+} from "bridge-sdk-ts";
 
 // region Test Functions
 async function testWalletOperations() {
     console.log("=== Testing Wallet Operations ===");
 
+    const url = process.env.NEO_NODE_URL || "http://localhost:40332";
     const networkFacade = await neonAdapter.apiWrapper.NetworkFacade.fromConfig({
         node: url
     });
@@ -342,7 +339,7 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
     }
 
     const walletPassword = process.env.WALLET_PASSWORD || '';
-    const rpcUrl = process.env.N3_RPC_URL || 'http://localhost:40332';
+    const rpcUrl = process.env.NEO_NODE_URL;
 
     let account: Account | null;
     if (walletPassword || walletPassword === "") {
@@ -362,6 +359,9 @@ export async function createMessageBridgeFromEnvironment(): Promise<MessageBridg
         throw new GenericError('Failed to load account from wallet file', 'ACCOUNT_LOAD_FAILED');
     }
 
+    if(!rpcUrl) {
+        throw new GenericError('NEO_NODE_URL environment variable is required', 'MISSING_RPC_URL');
+    }
     const config: ContractWrapperConfig = {
         contractHash,
         rpcUrl,
@@ -467,7 +467,7 @@ async function logPauseStates(messageBridge: MessageBridge) {
 // --- AUTO-TEST: MessageBridge executable message (match Java example) ---
 (async () => {
     process.env.MESSAGE_BRIDGE_CONTRACT_HASH = "bd98300a1951d72533fa749010265f71c4cfff38";
-    process.env.NEO_NODE_URL = "http://seed3t5.neo.org:40332";
+    process.env.NEO_NODE_URL = "http://localhost:40332";
     // process.env.MESSAGE_BRIDGE_OPERATION = "send-executable";
     // process.env.MESSAGE_EXECUTABLE_DATA = "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000005fd43b3efcb4ff1ca08229caecf67bc21d0c0a3000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000b156115f737be58a9115febe08dc474c8117aebd00000000000000000000000000000000000000000000000000000000";
     // process.env.MESSAGE_STORE_RESULT = "true";

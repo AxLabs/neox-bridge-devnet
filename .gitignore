@@ -3,6 +3,9 @@
 **/*node_modules
 addresses/
 personal.json
+copilot-instructions.md
 
 monitoring/grafana/data/
 monitoring/grafana/provisioning/
+
+.env

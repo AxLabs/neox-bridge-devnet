@@ -5,12 +5,19 @@
   "license": "MIT",
   "author": "Otniel Nicola",
   "type": "module",
-  "main": "index.ts",
   "scripts": {
-    "dev": "tsx index.ts"
+    "example:serialize": "tsx serializeCall.ts",
+    "example:wallet": "tsx walletOperations.ts",
+    "example:execute": "tsx executeMessage.ts",
+    "example:send-excutable": "MESSAGE_BRIDGE_OPERATION=send-executable tsx sendMessage.ts",
+    "example:send-result": "MESSAGE_BRIDGE_OPERATION=send-result tsx sendMessage.ts",
+    "example:send-store-only": "MESSAGE_BRIDGE_OPERATION=send-store-only tsx sendMessage.ts",
+    "example:readonly": "tsx readOnlyMethods.ts",
+    "example:pause": "tsx performAllPauseOperations.ts"
   },
   "dependencies": {
-    "@cityofzion/neon-js": "5.8.0"
+    "@bane-labs/bridge-sdk-ts": "^1.0.0-beta.1",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

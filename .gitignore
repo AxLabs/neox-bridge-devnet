@@ -7,3 +7,5 @@ copilot-instructions.md
 
 monitoring/grafana/data/
 monitoring/grafana/provisioning/
+
+.env

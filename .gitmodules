@@ -7,3 +7,6 @@
 [submodule "bridge-neo-contracts"]
 	path = bridge-neo-contracts
 	url = git@github.com:bane-labs/bridge-neo-contracts.git
+[submodule "tools/bridge-examples-ts"]
+	path = tools/bridge-examples-ts
+	url = git@github.com:AxLabs/bridge-examples-ts.git

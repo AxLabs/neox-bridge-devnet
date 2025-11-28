@@ -23,6 +23,7 @@ A development environment for cross-chain bridge development between NeoX and Ne
     - [Sending a String Message](#1-sending-a-string-message-1)
     - [Sending an EVM Contract Call](#2-sending-an-evm-contract-call)
     - [Sending a Custom Message](#3-sending-a-custom-message-1)
+  - [TypeScript Bridge Examples](#typescript-bridge-examples)
 
 ## Overview
 
@@ -258,3 +259,9 @@ If the wallet has insufficient funds, the script will fail. Fund the wallet befo
 - MessageBridge hash is auto-loaded if not provided.
 - Wallets are auto-copied if missing.
 - If you encounter issues, check script output and verify your environment variables and wallet balances.
+
+### TypeScript Bridge Examples
+
+The [`tools/bridge-examples-ts`](tools/bridge-examples-ts) directory provides TypeScript scripts for interacting with the MessageBridge contract. These examples use the [`bridge-sdk-ts`](https://www.npmjs.com/package/bridge-sdk-ts) library and cover common operations such as sending messages, executing contract calls, and querying contract state.
+
+For setup and usage instructions, see the [bridge-examples-ts README](tools/bridge-examples-ts/README.md).

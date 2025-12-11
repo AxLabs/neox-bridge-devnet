@@ -70,6 +70,7 @@ rm -f /tools/addresses/neox-addresses.json
 bash /tools/deploy/wait-for-neox-funding.sh
 npm install
 npx hardhat vars set NEOX_DEVNET_RPC_URL "$NEOX_RPC_URL"
+npx hardhat vars set PERSONAL_WALLET_FILENAME "personal"
 npx hardhat run scripts/deployAll.ts --network neoxDevnet | tee "$DEPLOY_ALL_LOG_FILE"
 
 # Extract addresses after successful deployment

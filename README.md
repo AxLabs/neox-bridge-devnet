@@ -81,6 +81,8 @@ This project provides a complete development stack with:
 ### NeoX:
 To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts, by the `neox-funding` service.
 
+- **Note:** When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
+
 Optionally, you can invoke again the funding script manually if needed:
    ```bash
     docker compose up -d neox-funding
@@ -88,13 +90,23 @@ Optionally, you can invoke again the funding script manually if needed:
 Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts only if they have less balance than the `GAS_AMOUNT` env variable.
 
 ### NeoN3:
-To fund accounts on NeoN3, you can use the `FUNDED_ADDRESS` and `GAS_AMOUNT` env variables of the `neon3-funding` service. The funding will be processed automatically after the NeoN3 node starts, and it will also fund all the wallets in the `/tools/neon3-funding/neon3-wallets` dir.
+To fund accounts on NeoN3, you must now specify both the `GAS_AMOUNT` and the `NEO_AMOUNT` environment variables for the `neon3-funding` service. The funding will be processed automatically after the NeoN3 node starts, and it will also fund all the wallets in the `/tools/neon3-funding/neon3-wallets` directory.
 
-Optionally, you can invoke again the funding script manually if needed:
+- **Both GAS and NEO tokens are funded.**
+- **The NEO amount is now a required parameter.**
+- The script will only fund a wallet if its GAS balance is below the `GAS_AMOUNT` or its NEO balance is below the `NEO_AMOUNT`.
+- The docker-compose command for neon3-funding now explicitly sets the NEO amount as the third parameter.
+- If you run the funding service multiple times, it will only top up wallets that are below the specified thresholds for either token.
+
+Optionally, you can invoke the funding script manually if needed:
    ```bash
    docker compose up -d neon3-funding
    ```
-Note that running the funding service multiple times will fund all the wallets in the `neon3-wallets` dir only if they have less balance than the `GAS_AMOUNT` env variable.
+
+**Note:**
+- Both `GAS_AMOUNT` and `NEO_AMOUNT` must be set and must be valid numbers.
+- The script will validate these parameters and fail early if they are missing or invalid.
+- The script now provides clear error messages and debug output if there are issues with the funding process.
 
 ## Check Node Availability
 

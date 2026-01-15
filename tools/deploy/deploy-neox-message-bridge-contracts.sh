@@ -131,7 +131,7 @@ BRIDGE_ADDRESS="$BRIDGE_PROXY" \
 TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" \
 ETH_AMOUNT=90 \
 TOKEN_AMOUNT=10000 \
-npx hardhat run scripts/fundAllBridges.ts --network neoxDevnet
+npx hardhat run scripts/fundBridgesAndPrivateWallet.ts --network neoxDevnet
 print_success "All bridges funded successfully!"
 
 # Keep the container running briefly to ensure everything is captured

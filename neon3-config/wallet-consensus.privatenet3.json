@@ -19,7 +19,7 @@
     {
       "address": "NM7Aky765FG8NhhwtxjXRx7jEL1cnw7PBP",
       "label": null,
-      "isDefault": false,
+      "isDefault": true,
       "lock": false,
       "key": "6PYM7jHL4GmS8Aw2iEFpuaHTCUKjhT4mwVqdoozGU6sUE25BjV4ePXDdLz",
       "contract": {

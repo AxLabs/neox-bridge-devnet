@@ -281,9 +281,15 @@ wait_for_confirmation() {
 
 fund_all_wallets() {
     local wallets_dir
-    wallets_dir="$(dirname "$0")/neon3-wallets"
+    wallets_dir="/tools/neon3-funding/neon3-wallets"
     local gas_amount="$1"
     local neo_amount="${2:-10}"  # Default to 10 NEO if not specified
+
+    if [ ! -d "$wallets_dir" ]; then
+        print_error "ERROR: Wallets directory does not exist: $wallets_dir"
+        exit 1
+    fi
+
     print_info "Funding all addresses in wallet files in $wallets_dir with $gas_amount GAS and $neo_amount NEO..."
 
     # Arrays to store pending transactions
@@ -300,6 +306,7 @@ fund_all_wallets() {
     # Phase 1: Check balances and send all transactions
     print_empty
     print_info "Phase 1: Checking balances and sending transactions..."
+
     for wallet_file in "$wallets_dir"/*.json; do
         if [ ! -f "$wallet_file" ]; then
             continue
@@ -309,6 +316,19 @@ fund_all_wallets() {
         # Extract all addresses from the accounts array
         local addresses
         addresses=$(jq -r '.accounts[].address' "$wallet_file" 2>/dev/null)
+        local jq_exit_code=$?
+
+        if [ $jq_exit_code -ne 0 ]; then
+            print_error "ERROR: Failed to parse JSON from $wallet_file"
+            continue
+        fi
+
+        if [ -z "$addresses" ]; then
+            print_info "WARNING: No addresses found in $wallet_file"
+            continue
+        fi
+
+
         for address in $addresses; do
             if [ -n "$address" ]; then
                 total_addresses=$((total_addresses + 1))
@@ -383,6 +403,196 @@ fund_all_wallets() {
     print_success "All wallet addresses processing completed."
 }
 
+set_policy_parameters() {
+    local storage_price="$1"
+    local exec_fee_factor="$2"
+    local fee_per_byte="$3"
+
+    print_info "Setting PolicyContract parameters..."
+    print_info "Required - Storage price: $storage_price, Execution fee factor: $exec_fee_factor, Fee per byte: $fee_per_byte"
+
+    # Use neow3j to check and set policy parameters
+    if command -v gradle >/dev/null 2>&1; then
+        print_info "Using neow3j to check and set policy parameters..."
+        generate_and_send_policy_transactions "$storage_price" "$exec_fee_factor" "$fee_per_byte"
+    else
+        print_error "Gradle not available - cannot check or set policy parameters"
+        print_error "Policy parameters management requires neow3j/Java environment"
+        exit 1
+    fi
+}
+
+# Helper function to extract error messages from Java output
+extract_error_message() {
+    local java_output="$1"
+    echo "$java_output" | grep "^ERROR_MESSAGE=" | cut -d'=' -f2-
+}
+
+# Helper function to show parameter changes
+show_parameter_changes() {
+    local java_output="$1"
+    local current_storage_price="$2"
+    local current_exec_factor="$3"
+    local current_fee_per_byte="$4"
+    local new_storage
+    local new_exec
+    local new_fee
+
+    if echo "$java_output" | grep -q "^NEEDS_UPDATE_STORAGE_PRICE="; then
+        new_storage=$(echo "$java_output" | grep "^NEEDS_UPDATE_STORAGE_PRICE=" | cut -d'=' -f2)
+        print_info "Storage price: $current_storage_price -> $new_storage"
+    fi
+    if echo "$java_output" | grep -q "^NEEDS_UPDATE_EXEC_FEE_FACTOR="; then
+        new_exec=$(echo "$java_output" | grep "^NEEDS_UPDATE_EXEC_FEE_FACTOR=" | cut -d'=' -f2)
+        print_info "Execution fee factor: $current_exec_factor -> $new_exec"
+    fi
+    if echo "$java_output" | grep -q "^NEEDS_UPDATE_FEE_PER_BYTE="; then
+        new_fee=$(echo "$java_output" | grep "^NEEDS_UPDATE_FEE_PER_BYTE=" | cut -d'=' -f2)
+        print_info "Fee per byte: $current_fee_per_byte -> $new_fee"
+    fi
+}
+
+# Helper function to handle policy status cases
+handle_policy_status() {
+    local policy_status="$1"
+    local java_output="$2"
+    local current_storage_price="$3"
+    local current_exec_factor="$4"
+    local current_fee_per_byte="$5"
+
+    case "$policy_status" in
+        "ALREADY_CORRECT")
+            print_success "All policy parameters are already set to desired values"
+            return
+            ;;
+        "READ_FAILED")
+            print_error "Failed to read policy settings: $(extract_error_message "$java_output")"
+            exit 1
+            ;;
+        "NEEDS_UPDATE")
+            print_info "Policy parameters need to be updated"
+            show_parameter_changes "$java_output" "$current_storage_price" "$current_exec_factor" "$current_fee_per_byte"
+            print_error "Java utility indicated updates needed but didn't send transactions"
+            print_error "This should not happen - check Java utility logic"
+            exit 1
+            ;;
+        "TRANSACTIONS_SENT")
+            print_success "Policy parameter transactions sent successfully by neow3j"
+            print_info "Updated policy parameters: $java_output"
+            print_info "Transaction hashes are available in the Java output above"
+            return
+            ;;
+        "TRANSACTION_SEND_FAILED")
+            print_error "Failed to send policy transactions: $(extract_error_message "$java_output")"
+            exit 1
+            ;;
+        "COMMITTEE_AUTHORITY_REQUIRED")
+            print_error "Policy changes require committee multisig authority"
+            print_error "Current network uses single-node setup without proper committee multisig"
+            print_error "Policy parameters cannot be changed - using current network values:"
+            print_error "  Storage price: $current_storage_price (desired: $STORAGE_PRICE)"
+            print_error "  Execution fee factor: $current_exec_factor (desired: $EXEC_FEE_FACTOR)"
+            print_error "  Fee per byte: $current_fee_per_byte (desired: $FEE_PER_BYTE)"
+            print_error "This configuration mismatch will cause deployment issues"
+            exit 1
+            ;;
+        *)
+            print_error "Unknown policy status: $policy_status"
+            print_error "Java output:"
+            echo "$java_output"
+            exit 1
+            ;;
+    esac
+}
+
+
+generate_and_send_policy_transactions() {
+    local storage_price="$1"
+    local exec_fee_factor="$2"
+    local fee_per_byte="$3"
+
+    # Set environment variables for the Java utility
+    export STORAGE_PRICE="$storage_price"
+    export EXEC_FEE_FACTOR="$exec_fee_factor"
+    export FEE_PER_BYTE="$fee_per_byte"
+
+    # Verify wallet file exists (should be provided via environment variable)
+    if [ -z "$WALLET_FILEPATH_DEPLOYER" ]; then
+        print_error "WALLET_FILEPATH_DEPLOYER environment variable not set"
+        exit 1
+    fi
+
+    if [ ! -f "$WALLET_FILEPATH_DEPLOYER" ]; then
+        print_error "Wallet file not found: $WALLET_FILEPATH_DEPLOYER"
+        exit 1
+    fi
+
+    # Navigate to the bridge-neo-contracts directory
+    local neo_contracts_dir="/bridge-neo-contracts"
+    if [ ! -d "$neo_contracts_dir" ]; then
+        print_error "Neo contracts directory not found: $neo_contracts_dir"
+        print_error "Cannot generate policy transactions without neow3j"
+        exit 1
+    fi
+
+    print_info "Checking policy parameters using SetupNetworkSettings..."
+    print_info "Using wallet: $WALLET_FILEPATH_DEPLOYER"
+    print_info "N3_JSON_RPC: $N3_JSON_RPC"
+
+    # Run the Java utility
+    cd "$neo_contracts_dir"
+
+    if [ ! -f "src/deploy/java/network/bane/scripts/setup/SetupNetworkSettings.java" ]; then
+        print_error "SetupNetworkSettings.java not found"
+        print_error "Cannot generate policy transactions"
+        exit 1
+    fi
+
+    print_info "Running Java policy check and transaction generation..."
+    local java_output
+    java_output=$(./gradlew -q run -PmainClass=network.bane.scripts.setup.SetupNetworkSettings 2>&1)
+    local gradle_exit_code=$?
+
+    print_info "Java utility exit code: $gradle_exit_code"
+
+    if [ $gradle_exit_code -ne 0 ]; then
+        print_error "Java utility failed to run"
+        print_error "Output:"
+        echo "$java_output"
+
+        # Check if it's a policy read failure
+        if echo "$java_output" | grep -q "POLICY_STATUS=READ_FAILED"; then
+            print_error "Failed to read current policy settings from Neo N3 node"
+            print_error "This indicates a problem with the RPC connection or policy contract access"
+        else
+            print_error "Java utility execution failed"
+        fi
+        exit 1
+    fi
+
+    # Parse the Java output for current values and status
+    local current_storage_price
+    local current_exec_factor
+    local current_fee_per_byte
+    local policy_status
+
+    current_storage_price=$(echo "$java_output" | grep "^CURRENT_STORAGE_PRICE=" | cut -d'=' -f2)
+    current_exec_factor=$(echo "$java_output" | grep "^CURRENT_EXEC_FEE_FACTOR=" | cut -d'=' -f2)
+    current_fee_per_byte=$(echo "$java_output" | grep "^CURRENT_FEE_PER_BYTE=" | cut -d'=' -f2)
+    policy_status=$(echo "$java_output" | grep "^POLICY_STATUS=" | cut -d'=' -f2)
+
+    print_info "Current policy settings from neow3j:"
+    print_info "  Storage price: $current_storage_price"
+    print_info "  Execution fee factor: $current_exec_factor"
+    print_info "  Fee per byte: $current_fee_per_byte"
+    print_info "  Status: $policy_status"
+
+    handle_policy_status "$policy_status" "$java_output" "$current_storage_price" "$current_exec_factor" "$current_fee_per_byte"
+
+    print_success "Policy parameter check completed"
+}
+
+
 set -e  # Exit on any error
 
 # Call sanity check functions
@@ -410,6 +620,8 @@ wait_for_node "$N3_JSON_RPC"
 # Main logic
 print_separator
 open_wallet
+print_separator
+set_policy_parameters "$STORAGE_PRICE" "$EXEC_FEE_FACTOR" "$FEE_PER_BYTE"
 print_separator
 fund_all_wallets "$GAS_AMOUNT_TO_FUND" "$NEO_AMOUNT_TO_FUND"
 

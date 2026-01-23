@@ -84,12 +84,14 @@ services:
     container_name: bridge-devnet-neon3-funding
     build:
       dockerfile_inline: |
-        FROM ubuntu:24.04
-        RUN apt-get update && apt-get install -y curl jq
+        FROM eclipse-temurin:8-jdk-jammy
+        RUN apt-get update && apt-get install -y curl jq gradle
     depends_on:
       - neon3-node
     volumes:
       - ./tools:/tools
+      - ./bridge-neo-contracts:/bridge-neo-contracts
+      - ./neon3-config:/neon3-config:ro
     environment:
       - N3_JSON_RPC=http://neon3-node:40332
       - GAS_AMOUNT=10000000000
@@ -97,15 +99,21 @@ services:
       - NEO_AMOUNT=10
       - NEO_TOKEN_HASH=0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5
       - FUNDED_ADDRESS=NYCtX5TPmCyLJSNATAufWfTgMoCit24QQr
+      - STORAGE_PRICE=1000
+      - EXEC_FEE_FACTOR=1
+      - FEE_PER_BYTE=0
+      - WALLET_FILEPATH_DEPLOYER=/neon3-config/wallet-consensus.privatenet3.json
+      - WALLET_PASSWORD_DEPLOYER=neo
     working_dir: /tools/neon3-funding
     command: [
       "sh", "-c",
-      "echo \"Funding accounts...\" \
-        && chmod u+x neon3-funding.sh \
-        && ./neon3-funding.sh $$FUNDED_ADDRESS $$GAS_AMOUNT 10 \
+      "echo \"Funding accounts and setting policy parameters...\" \
+        && chmod u+x neon3-funding-and-network-setup.sh \
+        && ./neon3-funding-and-network-setup.sh $$FUNDED_ADDRESS $$GAS_AMOUNT 10 \
         && echo \"Funding complete.\"
       "
     ]
+    restart: "no"
 
   neon3-contracts:
     container_name: bridge-devnet-deploy-n3-message-bridge
@@ -118,7 +126,10 @@ services:
           && rm -rf /var/lib/apt/lists/*
         WORKDIR /n3-contracts
     depends_on:
-      - neon3-node
+      neon3-node:
+        condition: service_started
+      neon3-funding:
+        condition: service_completed_successfully
     volumes:
       - ./bridge-neo-contracts:/n3-contracts:rw
       - ./tools:/tools
@@ -146,7 +157,6 @@ services:
     entrypoint: [
       "bash", "-c",
       "source /tools/utils/extract-pubkeys.sh /n3-wallets \
-      && bash /tools/deploy/wait-for-neon3-funding.sh \
       && expect -n /tools/deploy/deploy-n3-message-bridge-contracts.expect \
       && bash /tools/register/neo-set-native-bridge.sh \
       && bash /tools/register/neo-register-neo-token.sh \

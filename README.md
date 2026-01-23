@@ -81,13 +81,15 @@ This project provides a complete development stack with:
 ### NeoX:
 To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts, by the `neox-funding` service.
 
-- **Note:** When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
+> [!IMPORTANT]
+> Please use `bridge-evm-contracts/scripts/wallet/createWallet.ts` to create an EVM wallet. Make sure to name it as `personal.json` (with empty string as password) and copy it to `tools/neox-funding/neox-wallets`. When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
 
 Optionally, you can invoke again the funding script manually if needed:
    ```bash
     docker compose up -d neox-funding
    ```
-Note that running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts only if they have less balance than the `GAS_AMOUNT` env variable.
+> [!NOTE] 
+> Running the funding script multiple times will fund all the addresses in `tools/funding/neox-funding.csv` as well as the default accounts only if they have less balance than the `GAS_AMOUNT` env variable.
 
 ### NeoN3:
 To fund accounts on NeoN3, you must now specify both the `GAS_AMOUNT` and the `NEO_AMOUNT` environment variables for the `neon3-funding` service. The funding will be processed automatically after the NeoN3 node starts, and it will also fund all the wallets in the `/tools/neon3-funding/neon3-wallets` directory.

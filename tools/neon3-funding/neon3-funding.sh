@@ -326,6 +326,8 @@ fund_all_wallets() {
                     pending_gas_addresses+=("$address")
                 fi
 
+                sleep 0.8  # Small delay between GAS and NEO sends
+
                 # Send NEO
                 local neo_result
                 neo_result=$(check_and_send_neo_transaction "$address" "$neo_amount")
@@ -339,7 +341,7 @@ fund_all_wallets() {
                 fi
 
                 # Small delay between sends
-                sleep 0.5
+                sleep 0.8
             fi
         done
     done

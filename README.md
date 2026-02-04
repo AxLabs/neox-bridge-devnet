@@ -48,6 +48,11 @@ This project provides a complete development stack with:
    ```bash
    git submodule update --init --recursive
    ```
+> [!WARNING]
+> If you update the ./go-ethereum submodule to a different commit, make sure to also run the following command to build the required binaries:
+>   ```bash
+>   docker compose build neox-node
+>   ```
 
 ## Quick Start
 

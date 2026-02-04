@@ -1,5 +1,5 @@
 #!/bin/bash
-# wait-for-neon3-funding.sh
+# wait-for-neon3-funding-and-network-setup.sh
 # NEO N3 wrapper for the generic wait-for-funding.sh script
 
 set -e

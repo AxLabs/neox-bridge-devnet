@@ -1,6 +1,10 @@
 # Bridge DevNet
 
-A development environment for cross-chain bridge development between NeoX and NeoN3 blockchains.
+This repository contains a **Docker Compose–based Bridge Devnet** for local development and testing of the **Neo N3 ↔ Neo X bridge**.
+
+It spins up a complete, reproducible environment including a Neo N3 chain, a Neo X chain (based on the [`go-ethereum`](https://github.com/bane-labs/go-ethereum) fork maintained by the [`bane-labs`](https://github.com/bane-labs) organization), pre-funded accounts, automatic deployment of bridge-related smart contracts, and supporting infrastructure such as RabbitMQ, Prometheus, and Grafana.
+
+The Devnet is designed to enable **end-to-end testing, realistic debugging, and operational visibility** during bridge development by allowing the full system to be run locally with minimal setup.
 
 ## Table of Contents
 - [Overview](#overview)

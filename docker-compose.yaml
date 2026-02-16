@@ -40,7 +40,10 @@ services:
         FROM node:20
         RUN apt-get update && apt-get install -y jq
     depends_on:
-      - neox-node
+      neox-node:
+        condition: service_started
+      neox-funding:
+        condition: service_completed_successfully
     volumes:
       - ./bridge-evm-contracts:/app
       - ./tools:/tools
@@ -192,7 +195,7 @@ services:
     ports:
       - '9090:9090'
     volumes:
-      - $PWD/monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
 
   grafana:
     image: grafana/grafana
@@ -206,7 +209,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       # Bind the provisioning directory (keep track of data sources and dashboards config)
-      - $PWD/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
 
 volumes:
   rabbitmq_data:

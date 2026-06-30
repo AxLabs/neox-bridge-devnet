@@ -91,7 +91,7 @@ This project provides a complete development stack with:
 To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts, by the `neox-funding` service.
 
 > [!IMPORTANT]
-> Create an EVM keystore with `cd bridge-evm-contracts && npm run ops -- accounts create-keystore --path ../tools/neox-funding/neox-wallets/personal.json`. Use an empty password for the default devnet flow, or set the matching `OPS_PERSONAL_PASSWORD` value when running ops commands. When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
+> Create an EVM keystore with `cd bridge-evm-contracts && npm run ops -- accounts create-keystore --path ../tools/neox-funding/neox-wallets/personal.json`. Use an empty password for the default devnet flow, or set the matching `OPS_PERSONAL_PASSWORD` value when running ops commands. When this keystore exists during deployment, the bridge funding step also funds the personal wallet with the NEO token on NeoX. If you create it after deployment, run `./tools/neox-funding/fund-personal-neo-token.sh` while the devnet is running.
 
 Optionally, you can invoke again the funding script manually if needed:
    ```bash

@@ -215,13 +215,18 @@ print_success "Deployment and address extraction completed successfully!"
 print_info "Funding all bridges with initial ETH and tokens..."
 run_ops bridge fund-native --network "$OPS_NETWORK" --account owner --amount 90
 run_ops bridge fund-token --network "$OPS_NETWORK" --account deployer --token neo --amount 9000
-NEOX_RPC_URL="${NEOX_RPC_URL:-http://neox-node:8562}" \
-TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" \
-TOKEN_AMOUNT=1000 \
-DEPLOYER_WALLET_JSON="/app/wallets/deployer.json" \
-PERSONAL_WALLET_JSON="/app/wallets/${PERSONAL_WALLET_NAME:-personal}.json" \
-CONTRACTS_ROOT="/app" \
-node /tools/neox-funding/fund-personal-neo-token.js
+PERSONAL_WALLET_JSON="/app/wallets/${PERSONAL_WALLET_NAME:-personal}.json"
+if [ -f "$PERSONAL_WALLET_JSON" ]; then
+  NEOX_RPC_URL="${NEOX_RPC_URL:-http://neox-node:8562}" \
+  TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" \
+  TOKEN_AMOUNT=1000 \
+  DEPLOYER_WALLET_JSON="/app/wallets/deployer.json" \
+  PERSONAL_WALLET_JSON="$PERSONAL_WALLET_JSON" \
+  CONTRACTS_ROOT="/app" \
+  node /tools/neox-funding/fund-personal-neo-token.js
+else
+  print_warning "Skipping personal NEO token funding; wallet file not found: $PERSONAL_WALLET_JSON"
+fi
 print_success "All bridges funded successfully!"
 
 # Keep the container running briefly to ensure everything is captured

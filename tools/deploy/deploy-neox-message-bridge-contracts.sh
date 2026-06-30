@@ -10,6 +10,111 @@ set -e
 DEPLOY_ALL_LOG_FILE="/tmp/deploy-neox-message-bridge.log"
 DEPLOY_TOKEN_LOG_FILE="/tmp/deploy-register-neo.log"
 OUTPUT_FILE="/tools/addresses/neox-addresses.json"
+OPS_NETWORK="neox-devnet"
+OPS_NETWORK_CONFIG="/app/config/networks/${OPS_NETWORK}.local.json"
+OPS_DEPLOYMENT_CONFIG="/app/config/deployments/${OPS_NETWORK}.local.json"
+OPS_ACCOUNTS_CONFIG="/app/config/accounts/${OPS_NETWORK}.json"
+OPS_N3_NEO_ADDRESS="0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5"
+
+export OPS_DEPLOYER_PASSWORD="${OPS_DEPLOYER_PASSWORD:-}"
+export OPS_OWNER_PASSWORD="${OPS_OWNER_PASSWORD:-}"
+export OPS_GOVERNOR_PASSWORD="${OPS_GOVERNOR_PASSWORD:-}"
+export OPS_RELAYER_PASSWORD="${OPS_RELAYER_PASSWORD:-}"
+export OPS_VALIDATOR01_PASSWORD="${OPS_VALIDATOR01_PASSWORD:-}"
+export OPS_VALIDATOR02_PASSWORD="${OPS_VALIDATOR02_PASSWORD:-}"
+export OPS_PERSONAL_PASSWORD="${OPS_PERSONAL_PASSWORD:-}"
+
+write_ops_network_config() {
+    print_info "Writing ops network override: $OPS_NETWORK_CONFIG"
+    mkdir -p "$(dirname "$OPS_NETWORK_CONFIG")"
+    cat > "$OPS_NETWORK_CONFIG" <<EOF
+{
+  "name": "$OPS_NETWORK",
+  "rpcUrl": "${NEOX_RPC_URL:-http://neox-node:8562}"
+}
+EOF
+}
+
+write_ops_accounts_config() {
+    print_info "Writing ops accounts config: $OPS_ACCOUNTS_CONFIG"
+    mkdir -p "$(dirname "$OPS_ACCOUNTS_CONFIG")"
+    cat > "$OPS_ACCOUNTS_CONFIG" <<EOF
+{
+  "network": "$OPS_NETWORK",
+  "accounts": {
+    "deployer": {
+      "type": "keystore",
+      "path": "/app/wallets/deployer.json",
+      "passwordEnv": "OPS_DEPLOYER_PASSWORD"
+    },
+    "owner": {
+      "type": "keystore",
+      "path": "/app/wallets/owner.json",
+      "passwordEnv": "OPS_OWNER_PASSWORD"
+    },
+    "governor": {
+      "type": "keystore",
+      "path": "/app/wallets/governor.json",
+      "passwordEnv": "OPS_GOVERNOR_PASSWORD"
+    },
+    "relayer": {
+      "type": "keystore",
+      "path": "/app/wallets/relayer.json",
+      "passwordEnv": "OPS_RELAYER_PASSWORD"
+    },
+    "validator01": {
+      "type": "keystore",
+      "path": "/app/wallets/validator01.json",
+      "passwordEnv": "OPS_VALIDATOR01_PASSWORD"
+    },
+    "validator02": {
+      "type": "keystore",
+      "path": "/app/wallets/validator02.json",
+      "passwordEnv": "OPS_VALIDATOR02_PASSWORD"
+    },
+    "personal": {
+      "type": "keystore",
+      "path": "/app/wallets/${PERSONAL_WALLET_NAME:-personal}.json",
+      "passwordEnv": "OPS_PERSONAL_PASSWORD"
+    }
+  }
+}
+EOF
+}
+
+write_ops_deployment_config() {
+    print_info "Writing ops deployment override: $OPS_DEPLOYMENT_CONFIG"
+    mkdir -p "$(dirname "$OPS_DEPLOYMENT_CONFIG")"
+    cat > "$OPS_DEPLOYMENT_CONFIG" <<EOF
+{
+  "network": "$OPS_NETWORK",
+  "contracts": {
+    "bridge": "$BRIDGE_PROXY",
+    "bridgeManagement": "$BRIDGE_MANAGEMENT_PROXY",
+    "messageBridge": "$MESSAGE_BRIDGE_PROXY",
+    "executionManager": "$EXECUTION_MANAGER"
+  },
+  "tokens": {
+    "neo": {
+      "neoX": "$NEO_TOKEN_ADDRESS",
+      "neoN3": "$OPS_N3_NEO_ADDRESS",
+      "decimals": 18,
+      "symbol": "NEO"
+    }
+  }
+}
+EOF
+}
+
+write_ops_config() {
+    write_ops_network_config
+    write_ops_accounts_config
+    write_ops_deployment_config
+}
+
+run_ops() {
+    npm run ops -- "$@"
+}
 
 # Function to extract addresses
 extract_addresses() {
@@ -70,7 +175,8 @@ rm -f /tools/addresses/neox-addresses.json
 bash /tools/deploy/wait-for-neox-funding.sh
 npm install
 npx hardhat vars set NEOX_DEVNET_RPC_URL "$NEOX_RPC_URL"
-npx hardhat vars set PERSONAL_WALLET_FILENAME "${PERSONAL_WALLET_NAME:-personal}"
+write_ops_network_config
+write_ops_accounts_config
 npx hardhat run scripts/deployAll.ts --network neoxDevnet | tee "$DEPLOY_ALL_LOG_FILE"
 
 # Extract addresses after successful deployment
@@ -85,53 +191,37 @@ NEO_TOKEN_ADDRESS=$(extract_contract_address_from_log "$DEPLOY_TOKEN_LOG_FILE" "
 
 # Write addresses to JSON file
 write_addresses_to_file
+write_ops_config
 
 # Set native bridge configuration
 print_info "Setting native bridge configuration..."
-npx hardhat run scripts/setNativeBridge.ts --network neoxDevnet
+run_ops bridge configure-native --network "$OPS_NETWORK" --account governor --fee 0.001 --min 0.1 --max 100 --max-deposits 100 --decimals-here 18 --decimals-n3 8
 print_success "Native bridge configuration completed!"
 
-# Set token bridge configuration for NEO token - currently disabled because already done during registration step
-#print_info "Setting token bridge configuration for NEO token..."
-#if [ -n "$NEO_TOKEN_ADDRESS" ]; then
-#    TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" npx hardhat run scripts/setTokenBridge.ts --network neoxDevnet
-#    print_success "Token bridge configuration completed for NEO token!"
-#else
-#    print_warning "Could not extract NEO token address for token bridge configuration"
-#fi
+# Token bridge configuration for NEO is handled during the registration step above.
 
 # Unpause the native bridge and token bridges
 print_info "Unpausing all bridge components..."
-if [ -n "$NEO_TOKEN_ADDRESS" ]; then
-    TOKEN_ADDRESSES="$NEO_TOKEN_ADDRESS" \
-    npx hardhat run scripts/unpause/unpauseAllBridge.ts --network neoxDevnet
-    print_success "All bridge components unpaused successfully!"
-else
-    print_warning "Could not extract NEO token address, unpausing bridges without token addresses"
-    npx hardhat run scripts/unpause/unpauseAllBridge.ts --network neoxDevnet
-    print_success "Bridge components unpaused successfully!"
-fi
+run_ops bridge unpause --network "$OPS_NETWORK" --account governor --target all --token neo
+print_success "All bridge components unpaused successfully!"
 
 # Unpause the MessageBridge to make it ready for messages
 print_info "Unpausing MessageBridge..."
-if [ -n "$MESSAGE_BRIDGE_PROXY" ]; then
-    print_info "Unpausing MessageBridge at address: $MESSAGE_BRIDGE_PROXY"
-    NEOX_DEVNET_RPC_URL="$NEOX_RPC_URL" \
-    MESSAGE_BRIDGE_ADDRESS="$MESSAGE_BRIDGE_PROXY"\
-    npx hardhat run scripts/messages/unpause/unpauseAll.ts --network neoxDevnet
-    print_success "MessageBridge unpaused successfully!"
-else
-    print_warning "Could not extract MessageBridge address for unpausing"
-fi
+run_ops message unpause --network "$OPS_NETWORK" --account governor --target all
+print_success "MessageBridge unpaused successfully!"
 
 print_success "Deployment and address extraction completed successfully!"
 
 print_info "Funding all bridges with initial ETH and tokens..."
-BRIDGE_ADDRESS="$BRIDGE_PROXY" \
+run_ops bridge fund-native --network "$OPS_NETWORK" --account owner --amount 90
+run_ops bridge fund-token --network "$OPS_NETWORK" --account deployer --token neo --amount 9000
+NEOX_RPC_URL="${NEOX_RPC_URL:-http://neox-node:8562}" \
 TOKEN_ADDRESS="$NEO_TOKEN_ADDRESS" \
-ETH_AMOUNT=90 \
-TOKEN_AMOUNT=10000 \
-npx hardhat run scripts/fundBridgesAndPrivateWallet.ts --network neoxDevnet
+TOKEN_AMOUNT=1000 \
+DEPLOYER_WALLET_JSON="/app/wallets/deployer.json" \
+PERSONAL_WALLET_JSON="/app/wallets/${PERSONAL_WALLET_NAME:-personal}.json" \
+CONTRACTS_ROOT="/app" \
+node /tools/neox-funding/fund-personal-neo-token.js
 print_success "All bridges funded successfully!"
 
 # Keep the container running briefly to ensure everything is captured

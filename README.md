@@ -91,7 +91,7 @@ This project provides a complete development stack with:
 To fund accounts on NeoX, you can use the `tools/funding/neox-funding.csv` to add addresses and amounts. The funding will be processed automatically after the NeoX node starts, by the `neox-funding` service.
 
 > [!IMPORTANT]
-> Please use `bridge-evm-contracts/scripts/wallet/createWallet.ts` to create an EVM wallet. Make sure to name it as `personal.json` (with empty string as password) and copy it to `tools/neox-funding/neox-wallets`. When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
+> Create an EVM keystore with `cd bridge-evm-contracts && npm run ops -- accounts create-keystore --path ../tools/neox-funding/neox-wallets/personal.json`. Use an empty password for the default devnet flow, or set the matching `OPS_PERSONAL_PASSWORD` value when running ops commands. When the bridges are funded, the personal wallet is also funded with the NEO token on NeoX.
 
 Optionally, you can invoke again the funding script manually if needed:
    ```bash
@@ -181,7 +181,7 @@ If you make changes to the contracts and want to deploy them again, you can foll
 
 ### Sending Messages from NEOX to NEON3
 
-To send messages from NeoX to NeoN3, use scripts in `tools/send-from-evm`. The default wallet is `deployer`, override with `PERSONAL_WALLET_FILENAME`. Wallets must exist in `bridge-evm-contracts/wallets` (auto-copied from `tools/neox-funding/neox-wallets` if missing).
+To send messages from NeoX to NeoN3, use scripts in `tools/send-from-evm`. The default wallet is `deployer`, override with `PERSONAL_WALLET_FILENAME`. The scripts use the EVM contracts ops CLI and read wallets from `tools/neox-funding/neox-wallets`.
 
 If the wallet has insufficient funds, the script will fail. Fund the wallet beforehand (see [Funding Accounts](#funding-accounts)).
 
@@ -220,7 +220,7 @@ N3 scripts are always sent as executable messages.
 - `-t, --type TYPE`: Message type (`executable` or `store-only`, default: `store-only`)
 - `-d, --data DATA`: Raw hex message data, string message, or NeoN3 script bytes
 - `-s, --store-result BOOL`: Store result for executable messages (default: true)
-- `-n, --network NETWORK`: Hardhat network (default: neoxDevnet)
+- `-n, --network NETWORK`: Ops network (default: neox-devnet; neoxDevnet is accepted)
 - `-h, --help`: Show help
 
 **Environment Variables:**
@@ -228,7 +228,7 @@ N3 scripts are always sent as executable messages.
 
 **Notes:**
 - MessageBridge address is auto-loaded if not provided.
-- Wallets are auto-copied if missing.
+- The deployment service generates local ops config in `bridge-evm-contracts/config/*.local.json` and `bridge-evm-contracts/config/accounts/neox-devnet.json`.
 - If you encounter issues, check script output and verify wallet balances and environment variables.
 
 ### Sending Messages from NEON3 to NEOX
@@ -280,7 +280,7 @@ If the wallet has insufficient funds, the script will fail. Fund the wallet befo
 
 **Notes:**
 - MessageBridge hash is auto-loaded if not provided.
-- Wallets are auto-copied if missing.
+- The deployment service generates local ops config in `bridge-evm-contracts/config/*.local.json` and `bridge-evm-contracts/config/accounts/neox-devnet.json`.
 - If you encounter issues, check script output and verify your environment variables and wallet balances.
 
 ### TypeScript Bridge Examples

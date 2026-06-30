@@ -215,7 +215,7 @@ screen -S validator02
 
 ## Wallets
 
-- **Neo X**: EVM-compatible keystore (e.g. JSON from `tools/neox-funding/neox-wallets` or `bridge-evm-contracts/scripts/wallet/createWallet.ts`). Place in `neox_keystore_dir`.
+- **Neo X**: EVM-compatible keystore from `tools/neox-funding/neox-wallets`, or create one with `cd bridge-evm-contracts && npm run ops -- accounts create-keystore --path ../tools/neox-funding/neox-wallets/personal.json`. Place it in `neox_keystore_dir`.
 - **Neo N3**: NEP-6 wallet JSON. Path set via `n3_key_pair_file`.
 
 The relayer wallet must be the configured **relayer** address in BridgeManagement. Validator wallets must match the **validator** addresses/public keys in BridgeManagement on both chains.

@@ -1,12 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { createRequire } = require('module');
-
-const contractsRoot = process.env.CONTRACTS_ROOT || path.resolve(__dirname, '../../bridge-evm-contracts');
-const requireFromContracts = createRequire(path.join(contractsRoot, 'package.json'));
-const { ethers } = requireFromContracts('ethers');
+import fs from 'fs';
+import { ethers } from 'ethers';
 
 const ERC20_ABI = [
   'function decimals() view returns (uint8)',
